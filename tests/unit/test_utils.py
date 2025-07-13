@@ -120,12 +120,30 @@ class TestPrivacyUtils:
             "email": "test@example.com",
             "posts": [{"caption": "test post"}]
         }
-        
+
         anonymized = anonymize_data(data)
-        
+
         assert anonymized["username"] != "testuser"
         assert anonymized["email"] != "test@example.com"
         assert anonymized["posts"][0]["caption"] == "test post"  # Not in anonymize list
+
+    def test_anonymize_data_explicit_none(self):
+        """Anonymization when ``fields_to_anonymize`` is ``None``."""
+        data = {"username": "user1"}
+
+        anonymized = anonymize_data(data, None)
+
+        assert anonymized["username"] != "user1"
+
+    def test_anonymize_data_custom_fields(self):
+        """Anonymization with a custom field set."""
+        data = {"username": "user1", "email": "e@x.com"}
+
+        anonymized = anonymize_data(data, {"username"})
+
+        assert anonymized["username"] != "user1"
+        # Email should remain unchanged
+        assert anonymized["email"] == "e@x.com"
     
     def test_detect_sensitive_info_email(self):
         """Test email detection in text."""
