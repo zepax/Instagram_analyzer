@@ -2,15 +2,18 @@
 
 import hashlib
 import re
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 
-def anonymize_data(data: Dict[str, Any], fields_to_anonymize: Set[str] = None) -> Dict[str, Any]:
+def anonymize_data(
+    data: Dict[str, Any], fields_to_anonymize: Optional[Set[str]] = None
+) -> Dict[str, Any]:
     """Anonymize sensitive data fields.
     
     Args:
         data: Data dictionary to anonymize
-        fields_to_anonymize: Set of field names to anonymize
+        fields_to_anonymize: Optional set of field names to anonymize. If ``None``,
+            a default set of common sensitive fields is used.
         
     Returns:
         Anonymized data dictionary
