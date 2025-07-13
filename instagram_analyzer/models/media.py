@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import BaseModel, Field, validator
@@ -46,7 +46,7 @@ class Media(BaseModel):
     @validator('creation_timestamp', 'taken_at')
     def validate_timestamps(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate timestamp is not in the future."""
-        if v and v > datetime.now():
+        if v and v > datetime.now(timezone.utc):
             raise ValueError("Timestamp cannot be in the future")
         return v
     
