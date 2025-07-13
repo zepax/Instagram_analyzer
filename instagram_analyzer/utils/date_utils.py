@@ -1,6 +1,6 @@
 """Date and time utility functions."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Union, Optional, Tuple
 from dateutil import parser
 
@@ -126,7 +126,7 @@ def group_dates_by_period(dates: list, period: str = "month") -> dict:
             key = date.strftime("%Y-%m-%d")
         elif period == "week":
             # Get Monday of the week
-            monday = date - datetime.timedelta(days=date.weekday())
+            monday = date - timedelta(days=date.weekday())
             key = monday.strftime("%Y-%m-%d")
         elif period == "month":
             key = date.strftime("%Y-%m")

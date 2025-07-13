@@ -152,7 +152,10 @@ class BasicStatsAnalyzer:
         # Calculate consistency score (lower variance = higher consistency)
         if len(gaps) > 1:
             variance = sum((gap - average_gap) ** 2 for gap in gaps) / len(gaps)
-            consistency_score = max(0, 100 - (variance / average_gap * 10))
+            if average_gap == 0:
+                consistency_score = 100
+            else:
+                consistency_score = max(0, 100 - (variance / average_gap * 10))
         else:
             consistency_score = 100
         
