@@ -2,6 +2,7 @@
 
 from .basic_stats import BasicStatsAnalyzer
 from .temporal_analysis import TemporalAnalyzer
+from .network_analysis import NetworkAnalyzer
 # TODO: implement SentimentAnalyzer module
 # from .sentiment_analysis import SentimentAnalyzer
 # TODO: implement NetworkAnalyzer module
@@ -12,6 +13,5 @@ __all__ = [
     "TemporalAnalyzer",
     # TODO: export SentimentAnalyzer when available
     # "SentimentAnalyzer",
-    # TODO: export NetworkAnalyzer when available
-    # "NetworkAnalyzer",
+    "NetworkAnalyzer",
 ]
