@@ -104,6 +104,9 @@ class JSONParser:
         hashtags = self._extract_hashtags(caption)
         mentions = self._extract_mentions(caption)
         
+        likes_count = data.get("like_count", len(likes))
+        comments_count = data.get("comment_count", len(comments))
+
         return Post(
             caption=caption,
             media=media_list,
@@ -112,11 +115,11 @@ class JSONParser:
             location=data.get("location", {}).get("name") if data.get("location") else None,
             likes=likes,
             comments=comments,
-            likes_count=len(likes) or data.get("like_count", 0),
-            comments_count=len(comments) or data.get("comment_count", 0),
+            likes_count=likes_count,
+            comments_count=comments_count,
             hashtags=hashtags,
             mentions=mentions,
-            raw_data=data
+            raw_data=data,
         )
     
     def parse_stories(self, data: List[Dict[str, Any]]) -> List[Story]:
