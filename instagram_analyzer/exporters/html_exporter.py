@@ -7,6 +7,7 @@ from typing import Dict, List, Any, Optional
 from collections import Counter
 import base64
 
+from .. import __version__
 from ..models import Post, Story, Reel, Profile
 from ..utils import (
     get_image_thumbnail,
@@ -68,7 +69,7 @@ class HTMLExporter:
             "total_posts": len(analyzer.posts),
             "total_stories": len(analyzer.stories),
             "total_reels": len(analyzer.reels),
-            "analyzer_version": "0.1.0",
+            "analyzer_version": __version__,
         }
 
         if analyzer.profile and not anonymize:
@@ -80,8 +81,22 @@ class HTMLExporter:
                     "is_private": analyzer.profile.is_private,
                 }
             )
-        elif anonymize:
+        elif anonymize and analyzer.profile:
             metadata.update({"username": "User***", "display_name": "Anonymous User"})
+        elif anonymize and not analyzer.profile:
+            metadata.update(
+                {
+                    "username": "No profile data available",
+                    "display_name": "No profile data available",
+                }
+            )
+        elif not analyzer.profile:
+            metadata.update(
+                {
+                    "username": "No profile data available",
+                    "display_name": "No profile data available",
+                }
+            )
 
         return metadata
 
