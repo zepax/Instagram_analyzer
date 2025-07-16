@@ -6,6 +6,7 @@ authors = ["Instagram Analyzer Team"]
 license = "MIT"
 readme = "README.md"
 packages = [{include = "instagram_analyzer"}]
+include = ["instagram_analyzer/templates/report.html"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
