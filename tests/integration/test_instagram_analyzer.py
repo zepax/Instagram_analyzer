@@ -1,6 +1,7 @@
 """Integration tests for InstagramAnalyzer main class."""
 
 import json
+import re
 import pytest
 import tempfile
 from datetime import datetime, timezone
@@ -237,17 +238,19 @@ class TestInstagramAnalyzerAnalysis:
                 caption="Test reel",
                 likes_count=7,
                 comments_count=2,
+
             )
         ]
 
         results = analyzer.analyze()
 
         assert "total_posts" in results
-        assert "total_likes" in results
+        assert "total_reels" in results
         assert results["total_posts"] == 1
         assert results["total_reels"] == 1
         assert results["total_likes"] == 17
         assert results["total_comments"] == 7
+
 
     def test_analyze_with_no_data(self, mock_instagram_data):
         """Test analysis with no data loaded."""
@@ -440,7 +443,6 @@ class TestInstagramAnalyzerExports:
     def test_export_html(self, mock_instagram_data, temp_dir):
         """Test HTML export."""
         analyzer = InstagramAnalyzer(mock_instagram_data)
-
         output_path = temp_dir / "output"
         result_path = analyzer.export_html(output_path)
 
@@ -451,6 +453,12 @@ class TestInstagramAnalyzerExports:
         content = result_path.read_text()
         assert "<!DOCTYPE html>" in content
         assert "<html>" in content
+
+        match = re.search(r"const overview = (.*?);", content)
+        assert match
+        overview = json.loads(match.group(1))
+        assert overview["engagement_totals"]["likes"] == 8
+        assert overview["engagement_totals"]["comments"] == 3
 
     def test_export_pdf(self, mock_instagram_data, temp_dir):
         """Test PDF export."""

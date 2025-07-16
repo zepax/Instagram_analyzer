@@ -108,7 +108,7 @@ class HTMLExporter:
         stories = analyzer.stories
         reels = analyzer.reels
 
-        if not posts:
+        if not posts and not reels:
             return {"has_data": False}
 
         # Date range
@@ -137,6 +137,7 @@ class HTMLExporter:
         )
         total_items = len(posts) + len(reels)
 
+
         return {
             "has_data": True,
             "content_counts": {
@@ -163,6 +164,7 @@ class HTMLExporter:
                 ),
                 "avg_comments_per_post": (
                     round(total_comments / total_items, 1) if total_items else 0
+
                 ),
             },
         }
