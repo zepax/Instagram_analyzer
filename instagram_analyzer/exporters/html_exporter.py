@@ -128,10 +128,15 @@ class HTMLExporter:
             1 for p in posts if any(m.media_type.value == "video" for m in p.media)
         )
 
-        # Engagement totals combining posts and reels
-        all_content = posts + reels
-        total_likes = sum(item.likes_count for item in all_content)
-        total_comments = sum(item.comments_count for item in all_content)
+        # Engagement totals (include reels)
+        total_likes = sum(p.likes_count for p in posts) + sum(
+            r.likes_count for r in reels
+        )
+        total_comments = sum(p.comments_count for p in posts) + sum(
+            r.comments_count for r in reels
+        )
+        total_items = len(posts) + len(reels)
+
 
         return {
             "has_data": True,
@@ -155,10 +160,11 @@ class HTMLExporter:
                 "likes": total_likes,
                 "comments": total_comments,
                 "avg_likes_per_post": (
-                    round(total_likes / len(all_content), 1) if all_content else 0
+                    round(total_likes / total_items, 1) if total_items else 0
                 ),
                 "avg_comments_per_post": (
-                    round(total_comments / len(all_content), 1) if all_content else 0
+                    round(total_comments / total_items, 1) if total_items else 0
+
                 ),
             },
         }

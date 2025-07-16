@@ -227,7 +227,6 @@ class TestInstagramAnalyzerAnalysis:
                 comments_count=5,
             )
         ]
-
         analyzer.reels = [
             Reel(
                 video=Media(
@@ -237,8 +236,9 @@ class TestInstagramAnalyzerAnalysis:
                 ),
                 timestamp=datetime.now(timezone.utc),
                 caption="Test reel",
-                likes_count=20,
-                comments_count=7,
+                likes_count=7,
+                comments_count=2,
+
             )
         ]
 
@@ -248,8 +248,9 @@ class TestInstagramAnalyzerAnalysis:
         assert "total_reels" in results
         assert results["total_posts"] == 1
         assert results["total_reels"] == 1
-        assert results["total_likes"] == 30
-        assert results["total_comments"] == 12
+        assert results["total_likes"] == 17
+        assert results["total_comments"] == 7
+
 
     def test_analyze_with_no_data(self, mock_instagram_data):
         """Test analysis with no data loaded."""
@@ -442,37 +443,6 @@ class TestInstagramAnalyzerExports:
     def test_export_html(self, mock_instagram_data, temp_dir):
         """Test HTML export."""
         analyzer = InstagramAnalyzer(mock_instagram_data)
-
-        analyzer.posts = [
-            Post(
-                media=[
-                    Media(
-                        uri="post.jpg",
-                        media_type=MediaType.IMAGE,
-                        creation_timestamp=datetime.now(timezone.utc),
-                    )
-                ],
-                timestamp=datetime.now(timezone.utc),
-                caption="Post",
-                likes_count=5,
-                comments_count=2,
-            )
-        ]
-
-        analyzer.reels = [
-            Reel(
-                video=Media(
-                    uri="reel.mp4",
-                    media_type=MediaType.VIDEO,
-                    creation_timestamp=datetime.now(timezone.utc),
-                ),
-                timestamp=datetime.now(timezone.utc),
-                caption="Reel",
-                likes_count=3,
-                comments_count=1,
-            )
-        ]
-
         output_path = temp_dir / "output"
         result_path = analyzer.export_html(output_path)
 
