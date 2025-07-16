@@ -11,6 +11,8 @@ from rich.table import Table
 
 from .core import InstagramAnalyzer
 from .utils import validate_path
+from .logging_config import setup_logging, get_logger
+from .exceptions import InstagramAnalyzerError
 
 
 console = Console()
@@ -19,8 +21,10 @@ console = Console()
 @click.group()
 @click.version_option(version="0.1.0")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
+@click.option("--log-level", default="INFO", help="Set logging level (DEBUG, INFO, WARNING, ERROR)")
+@click.option("--log-file", help="Enable file logging to specified directory")
 @click.pass_context
-def main(ctx: click.Context, verbose: bool) -> None:
+def main(ctx: click.Context, verbose: bool, log_level: str, log_file: Optional[str]) -> None:
     """Instagram Analyzer - Advanced Instagram data analysis tool.
     
     Analyze your Instagram data export to generate insights, statistics,
@@ -28,6 +32,19 @@ def main(ctx: click.Context, verbose: bool) -> None:
     """
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
+    
+    # Setup logging
+    log_dir = Path(log_file) if log_file else None
+    setup_logging(
+        level=log_level.upper(),
+        log_dir=log_dir,
+        enable_file_logging=log_file is not None,
+        enable_structured_logging=True,
+        enable_performance_logging=verbose,
+    )
+    
+    logger = get_logger("cli")
+    logger.info(f"Starting Instagram Analyzer v0.1.0 with log level: {log_level}")
     
     if verbose:
         console.print("[bold blue]Instagram Analyzer v0.1.0[/bold blue]")
@@ -59,11 +76,17 @@ def analyze(ctx: click.Context, data_path: Path, output: Optional[Path],
         console.print(f"[bold]Include media analysis:[/bold] {include_media}")
         console.print(f"[bold]Anonymize data:[/bold] {anonymize}\n")
     
+    logger = get_logger("cli.analyze")
+    
     try:
         # Validate input path
         if not validate_path(data_path):
-            console.print("[red]Error: Invalid data path provided[/red]")
+            error_msg = "Invalid data path provided"
+            logger.error(error_msg, extra={"data_path": str(data_path)})
+            console.print(f"[red]Error: {error_msg}[/red]")
             sys.exit(1)
+        
+        logger.info(f"Starting analysis of data at: {data_path}")
         
         # Initialize analyzer
         with Progress(
@@ -101,9 +124,20 @@ def analyze(ctx: click.Context, data_path: Path, output: Optional[Path],
         # Display results summary
         _display_summary(results)
         console.print(f"\n[green]✓[/green] Report generated: [bold]{report_path}[/bold]")
+        logger.info(f"Analysis completed successfully. Report saved to: {report_path}")
+        
+    except InstagramAnalyzerError as e:
+        # Handle custom application errors
+        logger.error(f"Analysis failed: {e}", extra=e.context)
+        console.print(f"[red]Analysis Error: {e.message}[/red]")
+        if verbose and e.context:
+            console.print(f"[yellow]Context: {e.context}[/yellow]")
+        sys.exit(1)
         
     except Exception as e:
-        console.print(f"[red]Error during analysis: {e}[/red]")
+        # Handle unexpected errors
+        logger.error(f"Unexpected error during analysis: {e}", exc_info=True)
+        console.print(f"[red]Unexpected error: {e}[/red]")
         if verbose:
             console.print_exception()
         sys.exit(1)

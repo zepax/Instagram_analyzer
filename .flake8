@@ -1,0 +1,39 @@
+[flake8]
+# Configuration for flake8
+max-line-length = 88
+extend-ignore = 
+    # E203: whitespace before ':' (conflicts with black)
+    E203,
+    # W503: line break before binary operator (conflicts with black)
+    W503,
+    # E501: line too long (handled by black)
+    E501,
+    # F401: imported but unused (handled by isort/autoflake)
+    F401
+
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    .tox,
+    .venv,
+    venv,
+    docs,
+    migrations
+
+# Complexity
+max-complexity = 12
+
+# Docstring checking
+docstring-convention = google
+
+# Per-file ignores
+per-file-ignores =
+    # Tests can have longer lines and less strict rules
+    tests/*:E501,F401,D100,D101,D102,D103,D104
+    # __init__.py files often have imports only
+    __init__.py:F401,D104
+    # Allow print statements in CLI module
+    instagram_analyzer/cli.py:T201

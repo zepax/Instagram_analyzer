@@ -5,5 +5,31 @@ __author__ = "Instagram Analyzer Team"
 __email__ = "team@instagram-analyzer.com"
 
 from .core import InstagramAnalyzer
+from .exceptions import (
+    InstagramAnalyzerError,
+    DataError,
+    DataNotFoundError,
+    InvalidDataFormatError,
+    DataValidationError,
+    ParsingError,
+    JSONParsingError,
+    AnalysisError,
+    InsufficientDataError,
+    ExportError,
+    ConfigurationError,
+)
 
-__all__ = ["InstagramAnalyzer"]
+__all__ = [
+    "InstagramAnalyzer",
+    "InstagramAnalyzerError",
+    "DataError",
+    "DataNotFoundError",
+    "InvalidDataFormatError",
+    "DataValidationError",
+    "ParsingError",
+    "JSONParsingError",
+    "AnalysisError",
+    "InsufficientDataError",
+    "ExportError",
+    "ConfigurationError",
+]

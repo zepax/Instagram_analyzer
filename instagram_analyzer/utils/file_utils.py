@@ -3,6 +3,9 @@
 import json
 from pathlib import Path
 from typing import Any, Optional, Dict
+from glob import glob
+
+from .retry_utils import safe_json_load, safe_file_operation
 
 
 def validate_path(path: Path) -> bool:
@@ -35,6 +38,7 @@ def get_file_size(file_path: Path) -> int:
         return 0
 
 
+@safe_json_load
 def safe_json_load(file_path: Path) -> Optional[Dict[str, Any]]:
     """Safely load JSON file with error handling.
     
@@ -110,3 +114,68 @@ def ensure_directory(directory: Path) -> bool:
         return True
     except Exception:
         return False
+
+
+def resolve_media_path(media_uri: str, data_root: Path) -> Optional[Path]:
+    """Resolve media URI to actual file path.
+    
+    Args:
+        media_uri: URI from Instagram data
+        data_root: Root directory of Instagram export
+        
+    Returns:
+        Resolved file path or None if not found
+    """
+    if not media_uri:
+        return None
+    
+    # Extract filename from URI
+    filename = Path(media_uri).name
+    
+    # Common locations where Instagram stores media
+    search_paths = [
+        # Direct path as specified
+        data_root / media_uri,
+        
+        # In media directory
+        data_root / 'media' / filename,
+        data_root / 'media' / 'posts' / filename,
+        data_root / 'media' / 'stories' / filename,
+        
+        # In your_instagram_activity
+        data_root / 'your_instagram_activity' / 'media' / filename,
+        data_root / 'your_instagram_activity' / media_uri,
+    ]
+    
+    # Check direct paths first
+    for path in search_paths:
+        if path.exists():
+            return path
+    
+    # If not found, try searching with glob patterns
+    
+    # Search in stories subdirectories by year/month
+    story_pattern = str(data_root / 'media' / 'stories' / '*' / filename)
+    matches = glob(story_pattern)
+    for match in matches:
+        match_path = Path(match)
+        if match_path.exists():
+            return match_path
+    
+    # Search in posts subdirectories
+    posts_pattern = str(data_root / 'media' / 'posts' / '*' / filename)
+    matches = glob(posts_pattern)
+    for match in matches:
+        match_path = Path(match)
+        if match_path.exists():
+            return match_path
+    
+    # Search anywhere in the directory recursively as last resort
+    all_pattern = str(data_root / '**' / filename)
+    matches = glob(all_pattern, recursive=True)
+    for match in matches:
+        match_path = Path(match)
+        if match_path.exists():
+            return match_path
+    
+    return None

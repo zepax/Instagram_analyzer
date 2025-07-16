@@ -1,4 +1,43 @@
-"""Core Instagram data analyzer."""
+"""Core Instagram data analyzer.
+
+This module contains the main InstagramAnalyzer class that orchestrates the entire
+analysis pipeline for Instagram data exports. It provides a high-level interface
+for loading, parsing, analyzing, and exporting Instagram data.
+
+The analyzer supports:
+- Full and partial Instagram data exports
+- Multiple content types (posts, stories, reels, conversations)
+- Various analysis types (basic stats, temporal patterns, engagement metrics)
+- Multiple export formats (JSON, HTML, PDF)
+- Data validation and error recovery
+- Privacy-preserving anonymization
+
+Example:
+    Basic usage:
+    
+    >>> analyzer = InstagramAnalyzer("/path/to/instagram/export")
+    >>> analyzer.load_data()
+    >>> results = analyzer.analyze()
+    >>> analyzer.export_html("/path/to/output")
+    
+    Advanced usage with options:
+    
+    >>> analyzer = InstagramAnalyzer("/path/to/export")
+    >>> analyzer.load_data()
+    >>> validation = analyzer.validate_data()
+    >>> if validation["data_loaded"]["valid"]:
+    ...     results = analyzer.analyze(include_media=True)
+    ...     analyzer.export_json("/output", anonymize=True)
+
+Classes:
+    InstagramAnalyzer: Main analyzer class for Instagram data processing
+
+Dependencies:
+    - parsers: For data parsing and validation
+    - analyzers: For statistical analysis and pattern detection
+    - exporters: For report generation
+    - models: For data structure definitions
+"""
 
 import json
 import html
@@ -10,6 +49,14 @@ from ..models import Post, Story, Reel, Profile, User
 from ..parsers import JSONParser, DataDetector
 from ..analyzers import BasicStatsAnalyzer, TemporalAnalyzer
 from ..utils import validate_path, safe_json_load
+from ..logging_config import get_logger, create_operation_logger
+from ..cache import CacheManager, CacheConfig, cached_analysis, cached_parsing
+from ..exceptions import (
+    DataNotFoundError,
+    InvalidDataFormatError,
+    InsufficientDataError,
+    AnalysisError,
+)
 
 
 class InstagramAnalyzer:
@@ -20,12 +67,19 @@ class InstagramAnalyzer:
 
         Args:
             data_path: Path to Instagram data export directory
+            
+        Raises:
+            DataNotFoundError: If data path doesn't exist or is invalid
         """
         self.data_path = Path(data_path)
         self.profile: Optional[Profile] = None
         self.posts: List[Post] = []
         self.stories: List[Story] = []
         self.reels: List[Reel] = []
+
+        # Setup logging
+        self.logger = get_logger("core.analyzer")
+        self.logger.info(f"Initializing InstagramAnalyzer with data path: {self.data_path}")
 
         # Analyzers
         self.basic_stats = BasicStatsAnalyzer()
@@ -37,23 +91,65 @@ class InstagramAnalyzer:
 
         # Validation
         if not validate_path(self.data_path):
-            raise ValueError(f"Invalid data path: {self.data_path}")
+            error_msg = f"Invalid data path: {self.data_path}"
+            self.logger.error(error_msg)
+            raise DataNotFoundError(str(self.data_path), error_msg)
 
     def load_data(self) -> None:
-        """Load and parse Instagram data from export."""
-        # Detect data structure
-        data_structure = self.detector.detect_structure(self.data_path)
+        """Load and parse Instagram data from export.
+        
+        Raises:
+            InvalidDataFormatError: If data structure is invalid
+            DataNotFoundError: If required data files are missing
+        """
+        with create_operation_logger("load_data", {"data_path": str(self.data_path)}) as op_logger:
+            try:
+                # Detect data structure
+                op_logger.progress("Detecting data structure...")
+                data_structure = self.detector.detect_structure(self.data_path)
 
-        if not data_structure["is_valid"]:
-            raise ValueError("Invalid Instagram data export structure")
+                if not data_structure["is_valid"]:
+                    error_msg = "Invalid Instagram data export structure"
+                    self.logger.error(error_msg, extra={"data_structure": data_structure})
+                    raise InvalidDataFormatError(
+                        str(self.data_path), 
+                        "Instagram JSON export",
+                        error_msg,
+                        {"data_structure": data_structure}
+                    )
 
-        # Load profile data
-        self._load_profile(data_structure)
+                self.logger.info(
+                    f"Detected {data_structure['export_type']} export with {data_structure['total_files']} files"
+                )
 
-        # Load content data
-        self._load_posts(data_structure)
-        self._load_stories(data_structure)
-        self._load_reels(data_structure)
+                # Load profile data
+                op_logger.progress("Loading profile data...")
+                self._load_profile(data_structure)
+
+                # Load content data
+                op_logger.progress("Loading posts...")
+                self._load_posts(data_structure)
+                
+                op_logger.progress("Loading stories...")
+                self._load_stories(data_structure)
+                
+                op_logger.progress("Loading reels...")
+                self._load_reels(data_structure)
+
+                total_content = len(self.posts) + len(self.stories) + len(self.reels)
+                op_logger.complete(
+                    f"Successfully loaded {total_content} content items",
+                    {
+                        "posts_count": len(self.posts),
+                        "stories_count": len(self.stories),
+                        "reels_count": len(self.reels),
+                        "profile_loaded": self.profile is not None,
+                    }
+                )
+
+            except Exception as e:
+                self.logger.error(f"Failed to load data: {e}", exc_info=True)
+                raise
 
     def _load_profile(self, structure: Dict[str, Any]) -> None:
         """Load profile information."""
@@ -187,11 +283,14 @@ class InstagramAnalyzer:
         # Date range
         all_dates = []
         for post in self.posts:
-            all_dates.append(post.timestamp)
+            if post.timestamp:
+                all_dates.append(post.timestamp)
         for story in self.stories:
-            all_dates.append(story.timestamp)
+            if story.timestamp:
+                all_dates.append(story.timestamp)
         for reel in self.reels:
-            all_dates.append(reel.timestamp)
+            if reel.timestamp:
+                all_dates.append(reel.timestamp)
 
         if all_dates:
             min_date = min(all_dates)
@@ -213,6 +312,9 @@ class InstagramAnalyzer:
         Returns:
             Path to generated HTML file
         """
+        # Ensure output directory exists
+        output_path.mkdir(parents=True, exist_ok=True)
+        
         # Placeholder implementation
         html_file = output_path / "instagram_analysis.html"
         html_content = self._generate_html_report(anonymize)
@@ -232,6 +334,9 @@ class InstagramAnalyzer:
         Returns:
             Path to generated JSON file
         """
+        # Ensure output directory exists
+        output_path.mkdir(parents=True, exist_ok=True)
+        
         json_file = output_path / "instagram_analysis.json"
         results = self.analyze()
 
@@ -253,14 +358,14 @@ class InstagramAnalyzer:
         Returns:
             Path to generated PDF file
         """
-        # Placeholder implementation
-        pdf_file = output_path / "instagram_analysis.pdf"
-        # In a real implementation, you would use a library like reportlab
-        # For now, we'll create a simple text file
-        with open(pdf_file, "w", encoding="utf-8") as f:
-            f.write("PDF export not yet implemented")
+        from ..exporters import PDFExporter
 
-        return pdf_file
+        # Ensure output directory exists
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Create PDF exporter and generate report
+        exporter = PDFExporter()
+        return exporter.export(self, output_path, anonymize)
 
     def _generate_html_report(self, anonymize: bool = False) -> str:
         """Generate HTML report content."""

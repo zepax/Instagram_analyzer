@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+import html
 from typing import Any, Dict, List, Optional, Set
 
 
@@ -209,3 +210,70 @@ def safe_filename(filename: str) -> str:
         safe_name = name[:255-len(ext)-1] + ('.' + ext if ext else '')
     
     return safe_name.strip()
+
+
+def anonymize_conversation_data(conversation):
+    """Anonymize sensitive data in a conversation object.
+    
+    Args:
+        conversation: Conversation object to anonymize
+        
+    Returns:
+        Anonymized conversation object
+    """
+    try:
+        # Create a deep copy to avoid modifying the original
+        import copy
+        anonymized_conv = copy.deepcopy(conversation)
+        
+        # Generate anonymous participant mapping
+        participant_mapping = {}
+        for i, participant in enumerate(anonymized_conv.participants):
+            if not participant.is_self:
+                original_name = participant.name
+                anonymous_name = f"Contact_{i+1}"
+                participant_mapping[original_name] = anonymous_name
+                participant.name = anonymous_name
+                if participant.username:
+                    participant.username = f"user_{i+1}"
+        
+        # Anonymize conversation title
+        for original, anonymous in participant_mapping.items():
+            anonymized_conv.title = anonymized_conv.title.replace(original, anonymous)
+        
+        # Anonymize messages
+        for message in anonymized_conv.messages:
+            if message.sender_name in participant_mapping:
+                message.sender_name = participant_mapping[message.sender_name]
+            
+            # Optionally anonymize message content (remove @mentions of participants)
+            if message.content:
+                for original, anonymous in participant_mapping.items():
+                    message.content = message.content.replace(f"@{original.lower()}", f"@{anonymous.lower()}")
+        
+        # Clear raw data to remove any identifying information
+        anonymized_conv.raw_data = {}
+        
+        # Mark as anonymized
+        anonymized_conv.anonymization_applied = True
+        
+        return anonymized_conv
+        
+    except Exception as e:
+        # If anonymization fails, return the original conversation
+        print(f"Warning: Failed to anonymize conversation: {e}")
+        return conversation
+
+
+def safe_html_escape(text: str) -> str:
+    """Safely escape HTML characters in text.
+    
+    Args:
+        text: Text to escape
+        
+    Returns:
+        HTML-safe escaped text
+    """
+    if not text:
+        return ""
+    return html.escape(str(text))
