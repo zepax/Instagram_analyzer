@@ -11,6 +11,7 @@ from jinja2 import Environment
 
 from .. import __version__
 from ..models import Post, Story, Reel, Profile
+from ..analyzers import NetworkAnalyzer
 from ..utils import (
     get_image_thumbnail,
     resolve_media_path,
@@ -60,6 +61,7 @@ class HTMLExporter:
             "content_analysis": self._get_content_analysis(analyzer),
             "posts": self._get_posts_data(analyzer, anonymize),
             "charts_data": self._get_charts_data(analyzer),
+            "network_graph": self._get_network_graph_data(analyzer),
         }
 
         return data
@@ -453,6 +455,14 @@ class HTMLExporter:
             },
         }
 
+    def _get_network_graph_data(self, analyzer) -> Dict[str, Any]:
+        """Build network graph data using NetworkAnalyzer."""
+        if not analyzer.profile or not analyzer.posts:
+            return {"nodes": [], "links": []}
+
+        network = NetworkAnalyzer(analyzer.profile.username)
+        return network.analyze(analyzer.posts)
+
     def _render_template(self, data: Dict[str, Any]) -> str:
         """Render the HTML template with data using Jinja2."""
         env = Environment(autoescape=False)
@@ -465,6 +475,7 @@ class HTMLExporter:
             "CONTENT": json.dumps(data["content_analysis"], default=str),
             "POSTS": json.dumps(data["posts"], default=str),
             "CHARTS": json.dumps(data["charts_data"], default=str),
+            "NETWORK": json.dumps(data["network_graph"], default=str),
         }
 
         return tmpl.render(context)

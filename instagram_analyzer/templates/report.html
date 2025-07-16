@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instagram Analysis Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -260,6 +261,7 @@
             <a href="#engagement">Engagement</a>
             <a href="#content">Content</a>
             <a href="#posts">Posts</a>
+            <a href="#network">Network</a>
         </nav>
 
         <!-- Overview Stats -->
@@ -301,6 +303,14 @@
                 <div class="loading">Loading posts...</div>
             </div>
         </div>
+
+        <!-- Network Graph -->
+        <div class="section" id="network">
+            <h2>🔗 Network Graph</h2>
+            <div id="network-graph">
+                <div class="loading">Loading network graph...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -312,6 +322,7 @@
         const content = {{ CONTENT }};
         const posts = {{ POSTS }};
         const charts = {{ CHARTS }};
+        const network = {{ NETWORK }};
         
         // Render metadata
         function renderMetadata() {
@@ -623,6 +634,76 @@
                 }
             });
         }
+
+        // Render network graph with D3.js
+        function renderNetwork() {
+            const container = document.getElementById('network-graph');
+
+            if (!network.nodes.length) {
+                container.innerHTML = '<p>No network data available</p>';
+                return;
+            }
+
+            const width = 600;
+            const height = 400;
+            const svg = d3.create('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            container.innerHTML = '';
+            container.appendChild(svg.node());
+
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(network.links)
+                .enter().append('line')
+                .attr('stroke', '#999');
+
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(network.nodes)
+                .enter().append('circle')
+                .attr('r', 5)
+                .attr('fill', '#667eea')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            node.append('title').text(d => d.id);
+
+            const simulation = d3.forceSimulation(network.nodes)
+                .force('link', d3.forceLink(network.links).id(d => d.id).distance(80))
+                .force('charge', d3.forceManyBody().strength(-200))
+                .force('center', d3.forceCenter(width / 2, height / 2));
+
+            simulation.on('tick', () => {
+                link.attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            });
+
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
         
         // Initialize the report
         document.addEventListener('DOMContentLoaded', function() {
@@ -632,6 +713,7 @@
             renderEngagement();
             renderContent();
             renderPosts();
+            renderNetwork();
         });
     </script>
 </body>

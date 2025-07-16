@@ -453,6 +453,7 @@ class TestInstagramAnalyzerExports:
         content = result_path.read_text()
         assert "<!DOCTYPE html>" in content
         assert "<html>" in content
+        assert "network-graph" in content
 
         match = re.search(r"const overview = (.*?);", content)
         assert match
