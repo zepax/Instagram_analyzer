@@ -21,6 +21,7 @@ from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.widgets.markers import makeMarker
 from reportlab.lib.colors import HexColor
 
+from .. import __version__
 from ..models import Post, Story, Reel, Profile
 from ..utils import anonymize_data
 
@@ -135,12 +136,21 @@ class PDFExporter:
     def _get_metadata(self, analyzer, anonymize: bool) -> Dict[str, Any]:
         """Get report metadata."""
         metadata = {
-            'username': 'Anonymous User' if anonymize else (analyzer.profile.username if analyzer.profile else 'Unknown'),
-            'display_name': 'Anonymous' if anonymize else (analyzer.profile.name if analyzer.profile else 'Unknown'),
+            'username': (
+                'Anonymous User' if anonymize and analyzer.profile else (
+                    'No profile data available' if not analyzer.profile else analyzer.profile.username
+                )
+            ),
+            'display_name': (
+                'Anonymous' if anonymize and analyzer.profile else (
+                    'No profile data available' if not analyzer.profile else analyzer.profile.name
+                )
+            ),
             'total_posts': len(analyzer.posts),
             'total_stories': len(analyzer.stories),
             'total_reels': len(analyzer.reels),
-            'analysis_period': self._get_date_range(analyzer)
+            'analysis_period': self._get_date_range(analyzer),
+            'analyzer_version': __version__,
         }
         return metadata
     
