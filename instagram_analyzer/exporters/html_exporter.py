@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from collections import Counter
 import base64
+from importlib import resources
+from jinja2 import Environment
 
 from .. import __version__
 from ..models import Post, Story, Reel, Profile
@@ -447,7 +449,7 @@ class HTMLExporter:
 
     def _render_template(self, data: Dict[str, Any]) -> str:
         """Render the HTML template with data using Jinja2."""
-        env = Environment(autoescape=True)
+        env = Environment(autoescape=False)
         tmpl = env.from_string(self.template)
         context = {
             "METADATA": json.dumps(data["metadata"], default=str),

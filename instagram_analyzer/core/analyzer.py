@@ -314,15 +314,11 @@ class InstagramAnalyzer:
         """
         # Ensure output directory exists
         output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Placeholder implementation
-        html_file = output_path / "instagram_analysis.html"
-        html_content = self._generate_html_report(anonymize)
 
-        with open(html_file, "w", encoding="utf-8") as f:
-            f.write(html_content)
+        from ..exporters import HTMLExporter
 
-        return html_file
+        exporter = HTMLExporter()
+        return exporter.export(self, output_path, anonymize)
 
     def export_json(self, output_path: Path, anonymize: bool = False) -> Path:
         """Export analysis results as JSON.
