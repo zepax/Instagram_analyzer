@@ -1,6 +1,5 @@
 """Advanced HTML exporter for Instagram analysis reports."""
 
-
 import json
 from datetime import datetime
 from pathlib import Path
@@ -109,7 +108,7 @@ class HTMLExporter:
         stories = analyzer.stories
         reels = analyzer.reels
 
-        if not posts:
+        if not posts and not reels:
             return {"has_data": False}
 
         # Date range
@@ -129,9 +128,10 @@ class HTMLExporter:
             1 for p in posts if any(m.media_type.value == "video" for m in p.media)
         )
 
-        # Engagement totals
-        total_likes = sum(p.likes_count for p in posts)
-        total_comments = sum(p.comments_count for p in posts)
+        # Engagement totals combining posts and reels
+        all_content = posts + reels
+        total_likes = sum(item.likes_count for item in all_content)
+        total_comments = sum(item.comments_count for item in all_content)
 
         return {
             "has_data": True,
@@ -155,10 +155,10 @@ class HTMLExporter:
                 "likes": total_likes,
                 "comments": total_comments,
                 "avg_likes_per_post": (
-                    round(total_likes / len(posts), 1) if posts else 0
+                    round(total_likes / len(all_content), 1) if all_content else 0
                 ),
                 "avg_comments_per_post": (
-                    round(total_comments / len(posts), 1) if posts else 0
+                    round(total_comments / len(all_content), 1) if all_content else 0
                 ),
             },
         }
@@ -465,7 +465,7 @@ class HTMLExporter:
 
     def _get_template(self) -> str:
         """Return the HTML report template contents."""
-        template_path = (
-            resources.files("instagram_analyzer.templates").joinpath("report.html")
+        template_path = resources.files("instagram_analyzer.templates").joinpath(
+            "report.html"
         )
         return template_path.read_text(encoding="utf-8")
