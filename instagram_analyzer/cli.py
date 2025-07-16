@@ -19,7 +19,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version="0.2.0")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--log-level", default="INFO", help="Set logging level (DEBUG, INFO, WARNING, ERROR)")
 @click.option("--log-file", help="Enable file logging to specified directory")
@@ -44,10 +44,10 @@ def main(ctx: click.Context, verbose: bool, log_level: str, log_file: Optional[s
     )
     
     logger = get_logger("cli")
-    logger.info(f"Starting Instagram Analyzer v0.1.0 with log level: {log_level}")
+    logger.info(f"Starting Instagram Analyzer v0.2.0 with log level: {log_level}")
     
     if verbose:
-        console.print("[bold blue]Instagram Analyzer v0.1.0[/bold blue]")
+        console.print("[bold blue]Instagram Analyzer v0.2.0[/bold blue]")
         console.print("Advanced Instagram data analysis tool\n")
 
 
