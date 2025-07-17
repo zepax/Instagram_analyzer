@@ -1,3 +1,8 @@
+# Output directories
+output/
+backup/analysis_results/
+data/sample_exports/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -162,9 +167,10 @@ cython_debug/
 .vscode/
 
 # Data and examples
-examples/
+# examples/ - commented out to allow local reading without git tracking
 test_data/
 data/
+mi_analisis_personalizado
 *.json
 *.csv
 *.xlsx

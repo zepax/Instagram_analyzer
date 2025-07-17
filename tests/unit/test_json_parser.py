@@ -1,4 +1,5 @@
 import datetime
+
 from instagram_analyzer.parsers.json_parser import JSONParser
 
 

@@ -10,7 +10,7 @@
 ### 2. Contenido eliminado recientemente mostraba 0 items
 - **Problema**: Recently deleted content se detectaba pero parsing devolvía 0 items
 - **Causa**: Uso del modelo Media incorrecto (desde `models.base` en lugar de `models.media`)
-- **Solución**: 
+- **Solución**:
   - Corregido import para usar `from ..models.media import Media, MediaType`
   - Arreglado `_parse_single_media` para usar `creation_timestamp` en lugar de `timestamp`
   - Eliminado referencias a `MediaType.UNKNOWN` (no existe)
@@ -20,7 +20,7 @@
 - **Problema**: Mensajes DEBUG verbosos en múltiples archivos
 - **Solución**: Eliminados prints de debug de:
   - `json_parser.py`
-  - `html_exporter.py` 
+  - `html_exporter.py`
   - Otros archivos del sistema
 
 ### 4. Generación HTML con imágenes embebidas
@@ -31,7 +31,7 @@
 ## 📊 Estado actual de parsing
 
 - **Posts**: 338 ✅
-- **Stories**: 8,082 ✅  
+- **Stories**: 8,082 ✅
 - **Archived Posts**: 83 ✅
 - **Recently Deleted**: 12 ✅ (Arreglado hoy)
 - **Reels**: Pendiente verificar

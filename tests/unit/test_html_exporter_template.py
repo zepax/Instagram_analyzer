@@ -1,5 +1,6 @@
 import json
 from importlib import resources
+
 from instagram_analyzer.exporters import HTMLExporter
 
 
@@ -16,8 +17,11 @@ def test_template_contains_nav_and_hourly_chart():
 
 def test_template_contains_key_placeholders():
     """Verify essential placeholder elements exist in the HTML template."""
-    exporter = HTMLExporter()
-    template = exporter.template
+    template = (
+        resources.files("instagram_analyzer.templates")
+        .joinpath("report.html")
+        .read_text()
+    )
 
     placeholders = [
         "overview-stats",

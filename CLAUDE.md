@@ -22,41 +22,40 @@ poetry shell
 
 ### Main Application Commands
 ```bash
+# IMPORTANT: Actual CLI command is 'instagram-miner' (not 'instagram-analyzer')
 # Run the CLI tool
-instagram-analyzer analyze /path/to/instagram/data
+instagram-miner analyze /path/to/instagram/data
 
 # With options
-instagram-analyzer analyze /path/to/data --output ./output --format html --anonymize
+instagram-miner analyze /path/to/data --output ./output --format html --anonymize
 
 # Validate data structure
-instagram-analyzer validate /path/to/data
+instagram-miner validate /path/to/data
 
 # Get basic info
-instagram-analyzer info /path/to/data
+instagram-miner info /path/to/data
 ```
 
 ### Development and Testing
 ```bash
+# CRITICAL: Always set PYTHONPATH=src for all commands
 # Run tests
-poetry run pytest
+PYTHONPATH=src poetry run pytest
 
 # Run tests with coverage
-poetry run pytest --cov=instagram_analyzer
+PYTHONPATH=src poetry run pytest --cov=src/instagram_analyzer
 
 # Run specific test file
-poetry run pytest tests/unit/test_models.py
+PYTHONPATH=src poetry run pytest tests/unit/test_models.py
 
-# Code formatting
-poetry run black .
+# Quality checks (recommended - runs all checks)
+make quality  # Runs format, lint, type-check, security, test
 
-# Import sorting
-poetry run isort .
-
-# Type checking
-poetry run mypy instagram_analyzer
-
-# Linting
-poetry run flake8
+# Individual quality commands
+poetry run black src/instagram_analyzer/ tests/
+poetry run isort src/instagram_analyzer/ tests/
+poetry run mypy src/instagram_analyzer/
+poetry run flake8 src/instagram_analyzer/
 ```
 
 ## Architecture Overview
@@ -108,8 +107,24 @@ poetry run flake8
 
 ## Entry Points
 
-- **CLI**: `instagram_analyzer.cli:main` (configured in pyproject.toml)
-- **API**: Import `InstagramAnalyzer` from `instagram_analyzer.core`
+- **CLI**: `instagram-miner` → `instagram_analyzer.cli:main` (configured in pyproject.toml)
+- **API**: `data-api` → `instagram_analyzer.api:start` (FastAPI server)
+- **Programmatic**: Import `InstagramAnalyzer` from `instagram_analyzer.core`
+
+## Critical Project Structure Notes
+
+**IMPORTANT**: This project uses a **dual-directory structure**:
+
+- **Primary Implementation**: `/src/instagram_analyzer/` (complete, use this)
+  - Full feature set including ML, API, advanced caching
+  - Modern src-layout packaging pattern
+  - All imports: `from instagram_analyzer.module import Class`
+
+- **Legacy/Simplified**: `/instagram_analyzer/` (basic version, avoid for new development)
+  - Missing many modules (cache, ML, API, extractors)
+  - Appears to be backup or distribution copy
+
+**All development work should target `/src/instagram_analyzer/` and require `PYTHONPATH=src`**
 
 ## Data Structure Support
 
@@ -204,3 +219,63 @@ This project is fully equipped for AI-assisted development:
 - **Documentation standards** established for maintainability
 
 The codebase follows defensive security practices and is designed for local-only processing of user data exports.
+
+## Development Workflow with Makefile
+
+The project includes a comprehensive Makefile for streamlined development:
+
+### Essential Makefile Commands
+```bash
+# Setup and installation
+make setup-dev          # Complete dev environment setup
+make install-dev        # Install with dev dependencies
+
+# Quality and testing (most important)
+make quality            # All-in-one: format, lint, type-check, security, test
+make test              # Run all tests (sets PYTHONPATH=src automatically)
+make test-cov          # Run tests with coverage report
+
+# Individual checks
+make format            # Format code (black + isort)
+make lint              # Lint code (flake8 + pydocstyle)
+make type-check        # Type checking (mypy)
+make security          # Security checks (bandit + safety)
+
+# CI simulation
+make ci-full           # Simulate complete CI/CD pipeline
+make pre-commit        # Run all pre-commit hooks
+
+# Utilities
+make clean             # Clean build artifacts and cache
+make info              # Show environment information
+make show-deps         # Show dependency tree
+```
+
+### Key Architectural Patterns
+
+1. **Streaming/Memory-Efficient Processing**
+   - Uses `ijson` for large JSON files to avoid memory issues
+   - `memory_profiler.py` patterns for resource monitoring
+   - Lazy loading with `__slots__` in models
+
+2. **Two-Tier Caching System**
+   ```python
+   @cache_result(cache_key_func=lambda self, data_path: f"parse_{hash(str(data_path))}")
+   def expensive_operation(self, data_path: Path) -> Result:
+   ```
+
+3. **Pydantic v2 Models with Strict Typing**
+   - All data models use Pydantic v2 with strict configuration
+   - Custom base models with JSON encoders
+   - Type-safe throughout the entire pipeline
+
+4. **Rich Exception Hierarchy**
+   - Custom exceptions in `src/instagram_analyzer/exceptions.py`
+   - Retry decorators in `utils/retry_utils.py`
+   - Structured error context and recovery
+
+## Important Configuration Files
+
+- **GitHub Copilot Instructions**: `.github/copilot-instructions.md` contains detailed architecture patterns
+- **Makefile**: 200+ lines of development workflow automation
+- **pyproject.toml**: Comprehensive Poetry configuration with all dependencies organized by groups

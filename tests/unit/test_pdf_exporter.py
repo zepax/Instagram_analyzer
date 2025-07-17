@@ -1,12 +1,13 @@
 """Tests for PDF exporter functionality."""
 
-import pytest
-from unittest.mock import Mock, patch
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import Mock, patch
 
-from instagram_analyzer.exporters.pdf_exporter import PDFExporter
+import pytest
+
 from instagram_analyzer import __version__
+from instagram_analyzer.exporters.pdf_exporter import PDFExporter
 
 
 class TestPDFExporter:
@@ -140,9 +141,7 @@ class TestPDFExporter:
         ) as mock_anonymize:
             mock_anonymize.return_value = {"anonymized": True}
 
-            data = self.exporter._generate_report_data(
-                self.mock_analyzer, anonymize=True
-            )
+            data = self.exporter._generate_report_data(self.mock_analyzer, anonymize=True)
 
             mock_anonymize.assert_called_once()
             assert data == {"anonymized": True}

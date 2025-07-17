@@ -27,7 +27,7 @@ class JSONParser:
         self.streaming_parser = StreamingJSONParser(memory_threshold)
         self.batch_processor = BatchProcessor()
 
-    def parse_profile(self, data: Dict[str, Any]) -> Profile:
+    def parse_profile(self, data: dict[str, Any]) -> Profile:
         """Parse profile data from JSON.
 
         Args:
@@ -64,7 +64,7 @@ class JSONParser:
             raw_data=profile_data,
         )
 
-    def parse_posts(self, data: List[Dict[str, Any]]) -> List[Post]:
+    def parse_posts(self, data: list[dict[str, Any]]) -> list[Post]:
         """Parse posts data from JSON.
 
         Args:
@@ -103,7 +103,7 @@ class JSONParser:
 
         return posts
 
-    def parse_stories(self, data: Any) -> List[Story]:
+    def parse_stories(self, data: Any) -> list[Story]:
         """Parse stories data from JSON.
 
         Args:
@@ -142,7 +142,7 @@ class JSONParser:
 
         return stories
 
-    def parse_reels(self, data: List[Dict[str, Any]]) -> List[Reel]:
+    def parse_reels(self, data: list[dict[str, Any]]) -> list[Reel]:
         """Parse reels data from JSON.
 
         Args:
@@ -177,7 +177,7 @@ class JSONParser:
 
         return reels
 
-    def parse_archived_posts(self, data: Dict[str, Any]) -> List[Post]:
+    def parse_archived_posts(self, data: dict[str, Any]) -> list[Post]:
         """Parse archived posts data from JSON."""
         # Handle archived posts structure
         if isinstance(data, dict) and "ig_archived_post_media" in data:
@@ -187,7 +187,7 @@ class JSONParser:
 
         return self.parse_posts(archived_data)
 
-    def parse_recently_deleted(self, data: Dict[str, Any]) -> List[Media]:
+    def parse_recently_deleted(self, data: dict[str, Any]) -> list[Media]:
         """Parse recently deleted media data from JSON."""
         media_list = []
 
@@ -218,8 +218,8 @@ class JSONParser:
         return media_list
 
     def parse_story_interactions(
-        self, data: List[Dict[str, Any]], interaction_type: str
-    ) -> List[StoryInteraction]:
+        self, data: list[dict[str, Any]], interaction_type: str
+    ) -> list[StoryInteraction]:
         """Parse story interactions data from JSON."""
         interactions = []
 
@@ -248,7 +248,7 @@ class JSONParser:
 
         return interactions
 
-    def parse_posts_from_file(self, file_path: str) -> List[Post]:
+    def parse_posts_from_file(self, file_path: str) -> list[Post]:
         """Parse posts from a JSON file, using streaming for large files."""
         path_obj = Path(file_path) if isinstance(file_path, str) else file_path
         if should_use_streaming(path_obj, self.streaming_parser.memory_threshold):
@@ -261,7 +261,7 @@ class JSONParser:
                 return []
             return self.parse_posts(data)
 
-    def parse_stories_from_file(self, file_path: str) -> List[Story]:
+    def parse_stories_from_file(self, file_path: str) -> list[Story]:
         """Parse stories from a JSON file, using streaming for large files."""
         path_obj = Path(file_path) if isinstance(file_path, str) else file_path
         if should_use_streaming(path_obj, self.streaming_parser.memory_threshold):
@@ -276,38 +276,38 @@ class JSONParser:
             result = self.parse_stories(data)
             return result
 
-    def parse_reels_from_file(self, file_path: str) -> List[Reel]:
+    def parse_reels_from_file(self, file_path: str) -> list[Reel]:
         """Parse reels from a JSON file."""
         data = safe_json_load(file_path)
         if data is None:
             return []
         return self.parse_reels(data)
 
-    def parse_archived_posts_from_file(self, file_path: str) -> List[Post]:
+    def parse_archived_posts_from_file(self, file_path: str) -> list[Post]:
         """Parse archived posts from a JSON file."""
         data = safe_json_load(file_path)
         return self.parse_archived_posts(data)
 
-    def parse_recently_deleted_from_file(self, file_path: str) -> List[Media]:
+    def parse_recently_deleted_from_file(self, file_path: str) -> list[Media]:
         """Parse recently deleted media from a JSON file."""
         data = safe_json_load(file_path)
         return self.parse_recently_deleted(data)
 
-    def parse_media_from_file(self, file_path: str) -> List[Media]:
+    def parse_media_from_file(self, file_path: str) -> list[Media]:
         """Parse generic media from a JSON file (for recently deleted)."""
         data = safe_json_load(file_path)
         return self.parse_recently_deleted(data)
 
     def parse_story_interactions_from_file(
         self, file_path: str, interaction_type: str
-    ) -> List[StoryInteraction]:
+    ) -> list[StoryInteraction]:
         """Parse story interactions from a JSON file."""
         data = safe_json_load(file_path)
         if data is None:
             return []
         return self.parse_story_interactions(data, interaction_type)
 
-    def _parse_single_post(self, data: Dict[str, Any]) -> Optional[Post]:
+    def _parse_single_post(self, data: dict[str, Any]) -> Optional[Post]:
         """Parse a single post from JSON data."""
         # Handle different post data formats
         post_data = data
@@ -361,7 +361,7 @@ class JSONParser:
             raw_data=post_data,
         )
 
-    def _parse_single_story(self, data: Dict[str, Any]) -> Optional[Story]:
+    def _parse_single_story(self, data: dict[str, Any]) -> Optional[Story]:
         """Parse a single story from its JSON data."""
         uri = data.get("uri")
         creation_timestamp = data.get("creation_timestamp")
@@ -417,7 +417,7 @@ class JSONParser:
             traceback.print_exc()
             return None
 
-    def _parse_single_reel(self, data: Dict[str, Any]) -> Optional[Reel]:
+    def _parse_single_reel(self, data: dict[str, Any]) -> Optional[Reel]:
         """Parse a single reel from its JSON data."""
         uri = data.get("uri")
         taken_at = self._parse_date(
@@ -428,18 +428,18 @@ class JSONParser:
             return None
 
         return Reel(
-            media=Media(
+            video=Media(
                 uri=uri,
                 creation_timestamp=taken_at.timestamp(),
                 media_type=MediaType.REEL,
                 title=data.get("title", ""),
             ),
-            taken_at=taken_at,
+            timestamp=taken_at,
             caption=data.get("caption", ""),
             raw_data=data,
         )
 
-    def _parse_single_media(self, data: Dict[str, Any]) -> Optional[Media]:
+    def _parse_single_media(self, data: dict[str, Any]) -> Optional[Media]:
         """Parse a single media item from JSON data."""
         uri = data.get("uri", "")
         media_type = self._get_media_type_from_uri(uri)
@@ -454,7 +454,7 @@ class JSONParser:
         )
 
     def _parse_single_story_interaction(
-        self, data: Dict[str, Any], interaction_type: str
+        self, data: dict[str, Any], interaction_type: str
     ) -> Optional[StoryInteraction]:
         """Parse a single story interaction from JSON data."""
         # Data is often a list of dicts with 'string_map_data'
@@ -507,7 +507,7 @@ class JSONParser:
         else:
             return MediaType.IMAGE
 
-    def _extract_media(self, data: Dict[str, Any]) -> List[Media]:
+    def _extract_media(self, data: dict[str, Any]) -> list[Media]:
         """Extract media list from post data."""
         media_list = []
 
@@ -533,7 +533,7 @@ class JSONParser:
         return media_list
 
     def _extract_single_media(
-        self, data: Dict[str, Any], media_type: Optional[MediaType] = None
+        self, data: dict[str, Any], media_type: Optional[MediaType] = None
     ) -> Optional[Media]:
         """Extract single media from data."""
         media_list = self._extract_media(data)
@@ -541,7 +541,7 @@ class JSONParser:
             return media_list[0]
         return None
 
-    def _create_media_from_data(self, data: Dict[str, Any]) -> Optional[Media]:
+    def _create_media_from_data(self, data: dict[str, Any]) -> Optional[Media]:
         """Create Media object from data."""
         uri = data.get("uri")
         if not uri:
@@ -553,15 +553,14 @@ class JSONParser:
         return Media(
             uri=uri,
             media_type=media_type,
-            creation_timestamp=self._parse_timestamp(data)
-            or datetime.now(timezone.utc),
+            creation_timestamp=self._parse_timestamp(data) or datetime.now(timezone.utc),
             title=data.get("title"),
             width=data.get("width"),
             height=data.get("height"),
             duration=data.get("duration"),
         )
 
-    def _parse_timestamp(self, data: Dict[str, Any]) -> Optional[datetime]:
+    def _parse_timestamp(self, data: dict[str, Any]) -> Optional[datetime]:
         """Parse timestamp from various possible fields."""
         timestamp_fields = [
             "creation_timestamp",
@@ -585,7 +584,7 @@ class JSONParser:
 
         return None
 
-    def _parse_comments(self, comments_data: List[Dict[str, Any]]) -> List[Comment]:
+    def _parse_comments(self, comments_data: list[dict[str, Any]]) -> list[Comment]:
         """Parse comments from data."""
         comments = []
 
@@ -620,7 +619,7 @@ class JSONParser:
 
         return comments
 
-    def _parse_likes(self, likes_data: List[Dict[str, Any]]) -> List[Like]:
+    def _parse_likes(self, likes_data: list[dict[str, Any]]) -> list[Like]:
         """Parse likes from data."""
         likes = []
 
@@ -647,7 +646,7 @@ class JSONParser:
 
         return likes
 
-    def _extract_hashtags(self, text: str) -> List[str]:
+    def _extract_hashtags(self, text: str) -> list[str]:
         """Extract hashtags from text."""
         if not text:
             return []
@@ -655,7 +654,7 @@ class JSONParser:
         hashtags = [word for word in text.split() if word.startswith("#")]
         return hashtags
 
-    def _extract_mentions(self, text: str) -> List[str]:
+    def _extract_mentions(self, text: str) -> list[str]:
         """Extract mentions from text."""
         if not text:
             return []
@@ -666,9 +665,9 @@ class JSONParser:
     def _find_engagement_by_timestamp(
         self,
         post_timestamp: datetime,
-        liked_posts: Dict[str, Any],
-        post_comments: Dict[str, Any],
-    ) -> Dict[str, int]:
+        liked_posts: dict[str, Any],
+        post_comments: dict[str, Any],
+    ) -> dict[str, int]:
         """Find engagement data by matching timestamps.
 
         Args:
@@ -685,9 +684,7 @@ class JSONParser:
         # Look for likes with similar timestamps (within 1 hour)
         for url, like_data in liked_posts.items():
             if like_data.get("datetime"):
-                time_diff = abs(
-                    (post_timestamp - like_data["datetime"]).total_seconds()
-                )
+                time_diff = abs((post_timestamp - like_data["datetime"]).total_seconds())
                 if time_diff <= 3600:  # Within 1 hour
                     likes_count += 1
 
@@ -705,11 +702,11 @@ class JSONParser:
 
     def _find_engagement_by_media(
         self,
-        media_list: List[Media],
+        media_list: list[Media],
         caption: str,
-        liked_posts: Dict[str, Any],
-        post_comments: Dict[str, Any],
-    ) -> Dict[str, int]:
+        liked_posts: dict[str, Any],
+        post_comments: dict[str, Any],
+    ) -> dict[str, int]:
         """Find engagement data by matching media URIs or captions.
 
         Args:
@@ -748,8 +745,8 @@ class JSONParser:
         return {"likes_count": likes_count, "comments_count": comments_count}
 
     def _get_engagement_stats(
-        self, posts: List[Post], engagement_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, posts: list[Post], engagement_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Get engagement statistics for posts."""
         stats = {
             "total_likes": 0,
@@ -775,8 +772,8 @@ class JSONParser:
         return stats
 
     def enrich_posts_with_engagement(
-        self, posts: List[Post], engagement_data: Dict[str, Any]
-    ) -> List[Post]:
+        self, posts: list[Post], engagement_data: dict[str, Any]
+    ) -> list[Post]:
         """Enrich posts with engagement data like comments and likes."""
         if not engagement_data:
             return posts

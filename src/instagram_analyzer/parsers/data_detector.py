@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from ..utils import safe_json_load
 
@@ -42,7 +42,7 @@ class DataDetector:
         # Base path for relative path calculations
         self.base_path = None
 
-    def detect_structure(self, data_path: Path) -> Dict[str, Any]:
+    def detect_structure(self, data_path: Path) -> dict[str, Any]:
         """Detect Instagram data export structure.
 
         Args:
@@ -74,6 +74,9 @@ class DataDetector:
         }
 
         if not data_path.exists() or not data_path.is_dir():
+            # Only set "unknown" for nonexistent paths, not for empty directories
+            if not data_path.exists():
+                structure["export_type"] = "unknown"
             return structure
 
         # Scan directory structure
@@ -87,7 +90,7 @@ class DataDetector:
 
         return structure
 
-    def _scan_directory(self, path: Path, structure: Dict[str, Any]) -> None:
+    def _scan_directory(self, path: Path, structure: dict[str, Any]) -> None:
         """Recursively scan directory for Instagram files."""
         for item in path.iterdir():
             if item.is_dir():
@@ -101,7 +104,7 @@ class DataDetector:
                 # Categorize files
                 self._categorize_file(item, structure)
 
-    def _categorize_file(self, file_path: Path, structure: Dict[str, Any]) -> None:
+    def _categorize_file(self, file_path: Path, structure: dict[str, Any]) -> None:
         """Categorize file based on name and location."""
         filename = file_path.name.lower()
 
@@ -111,9 +114,7 @@ class DataDetector:
 
         # Use relative path parts for precise matching
         try:
-            path_parts = [
-                p.lower() for p in file_path.relative_to(self.base_path).parts
-            ]
+            path_parts = [p.lower() for p in file_path.relative_to(self.base_path).parts]
 
         except (ValueError, AttributeError):
             # Fallback for safety
@@ -194,9 +195,7 @@ class DataDetector:
         # --- Fallback for older/different structures ---
 
         # Generic Profile check
-        if any(
-            name in filename for name in ["profile.json", "account_information.json"]
-        ):
+        if any(name in filename for name in ["profile.json", "account_information.json"]):
             if file_path not in structure["profile_files"]:
                 structure["profile_files"].append(file_path)
             return
@@ -242,7 +241,7 @@ class DataDetector:
     def _is_engagement_file(self, file_path: Path, engagement_type: str) -> bool:
         """Check if file contains engagement data."""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Check different engagement file structures
@@ -289,9 +288,7 @@ class DataDetector:
                 for key in ["posts", "data", "items"]:
                     if key in data and isinstance(data[key], list):
                         for item in data[key][:5]:
-                            if isinstance(item, dict) and self._has_post_structure(
-                                item
-                            ):
+                            if isinstance(item, dict) and self._has_post_structure(item):
                                 return True
 
             return False
@@ -316,9 +313,7 @@ class DataDetector:
                 ]:
                     if key in data and isinstance(data[key], list):
                         for item in data[key][:5]:
-                            if isinstance(item, dict) and self._has_story_structure(
-                                item
-                            ):
+                            if isinstance(item, dict) and self._has_story_structure(item):
                                 return True
             elif isinstance(data, list):
                 # It's a list of stories directly
@@ -348,16 +343,14 @@ class DataDetector:
                 for key in ["reels", "data", "items"]:
                     if key in data and isinstance(data[key], list):
                         for item in data[key][:5]:
-                            if isinstance(item, dict) and self._has_reel_structure(
-                                item
-                            ):
+                            if isinstance(item, dict) and self._has_reel_structure(item):
                                 return True
 
             return False
         except Exception:
             return False
 
-    def _has_post_structure(self, item: Dict[str, Any]) -> bool:
+    def _has_post_structure(self, item: dict[str, Any]) -> bool:
         """Check if item has post-like structure."""
         post_indicators = [
             "media",
@@ -369,19 +362,19 @@ class DataDetector:
 
         return any(indicator in item for indicator in post_indicators)
 
-    def _has_story_structure(self, item: Dict[str, Any]) -> bool:
+    def _has_story_structure(self, item: dict[str, Any]) -> bool:
         """Check if item has story-like structure."""
         story_indicators = ["creation_timestamp", "timestamp", "uri", "media_metadata"]
 
         return any(indicator in item for indicator in story_indicators)
 
-    def _has_reel_structure(self, item: Dict[str, Any]) -> bool:
+    def _has_reel_structure(self, item: dict[str, Any]) -> bool:
         """Check if item has reel-like structure."""
         reel_indicators = ["media", "creation_timestamp", "timestamp", "caption"]
 
         return any(indicator in item for indicator in reel_indicators)
 
-    def _validate_structure(self, structure: Dict[str, Any]) -> bool:
+    def _validate_structure(self, structure: dict[str, Any]) -> bool:
         """Validate if structure looks like Instagram export."""
         # Must have some content files
         content_files = (
@@ -391,17 +384,29 @@ class DataDetector:
         )
 
         if content_files == 0:
+            # No content files, check if there's profile or engagement data
+            if (
+                len(structure["profile_files"]) > 0
+                or len(structure["engagement_files"]["liked_posts"]) > 0
+                or len(structure["engagement_files"]["post_comments"]) > 0
+                or len(structure["engagement_files"]["reel_comments"]) > 0
+            ):
+                return True
             return False
 
-        # Should have some common folders
-        common_folders_found = sum(
-            1 for folder in self.COMMON_FOLDERS if folder in structure["folders_found"]
-        )
+        # If we have content files, it's a valid Instagram export
+        return True
 
-        return common_folders_found >= 1
-
-    def _determine_export_type(self, structure: Dict[str, Any]) -> str:
+    def _determine_export_type(self, structure: dict[str, Any]) -> str:
         """Determine type of Instagram export."""
+        # Special case for nonexistent paths - use "unknown" status
+        if not self.base_path.exists():
+            return "unknown"
+
+        # For empty directory, return invalid
+        if len(structure["folders_found"]) == 0 and structure["total_files"] == 0:
+            return "invalid"
+
         if not structure["is_valid"]:
             return "invalid"
 
@@ -410,11 +415,7 @@ class DataDetector:
             return "full_export"
 
         # Check for content-only export
-        if (
-            structure["post_files"]
-            or structure["story_files"]
-            or structure["reel_files"]
-        ):
+        if structure["post_files"] or structure["story_files"] or structure["reel_files"]:
             return "content_export"
 
         return "partial_export"

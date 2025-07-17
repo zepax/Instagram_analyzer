@@ -1,20 +1,22 @@
 """Pydantic models for Instagram data structures."""
 
-from .post import Post, Story, Reel, ContentType
-from .user import User, Profile
-from .interaction import Comment, Like, Follow
+from .conversation import Conversation, Message
+from .interaction import Comment, Like, StoryInteraction
 from .media import Media, MediaType
+from .post import Post, Reel, Story
+from .user import Profile, User
 
 __all__ = [
-    "Post",
-    "Story", 
-    "Reel",
     "User",
     "Profile",
-    "Comment",
+    "Post",
+    "Story",
+    "Reel",
+    "Conversation",
+    "Message",
     "Like",
-    "Follow",
+    "Comment",
+    "StoryInteraction",
     "Media",
     "MediaType",
-    "ContentType",
 ]

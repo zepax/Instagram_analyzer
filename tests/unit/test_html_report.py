@@ -1,5 +1,7 @@
 import types
+
 import pytest
+
 from instagram_analyzer.core.analyzer import InstagramAnalyzer
 
 
