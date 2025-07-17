@@ -5,16 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..models import (
-    Comment,
-    Like,
-    Post,
-    Profile,
-    Reel,
-    Story,
-    StoryInteraction,
-    User,
-)
+from ..models import Comment, Like, Post, Profile, Reel, Story, StoryInteraction, User
 from ..models.media import Media, MediaType
 from ..utils import parse_instagram_date, safe_json_load
 from ..utils.streaming_parser import (
@@ -296,6 +287,11 @@ class JSONParser:
         """Parse archived posts from a JSON file."""
         data = safe_json_load(file_path)
         return self.parse_archived_posts(data)
+
+    def parse_recently_deleted_from_file(self, file_path: str) -> List[Media]:
+        """Parse recently deleted media from a JSON file."""
+        data = safe_json_load(file_path)
+        return self.parse_recently_deleted(data)
 
     def parse_media_from_file(self, file_path: str) -> List[Media]:
         """Parse generic media from a JSON file (for recently deleted)."""

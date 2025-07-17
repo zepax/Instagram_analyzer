@@ -49,6 +49,11 @@ class Media(BaseModel):
             raise ValueError("URI cannot be empty")
         return v.strip()
 
+    @property
+    def timestamp(self) -> datetime:
+        """Compatibility property for timestamp access."""
+        return self.creation_timestamp
+
     @field_validator("creation_timestamp", "taken_at")
     @classmethod
     def validate_timestamps(cls, v: Optional[datetime]) -> Optional[datetime]:
