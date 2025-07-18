@@ -267,7 +267,7 @@ class CacheManager:
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
 
-    def keys(self, include_memory: bool = True, include_disk: bool = True) -> set[str]:
+    def keys(self, include_memory: bool = True, include_disk: bool = True) -> Set[str]:
         """Get all cache keys from specified layers.
 
         Args:

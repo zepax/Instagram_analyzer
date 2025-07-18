@@ -352,7 +352,7 @@ class DiskCache:
 
         return True
 
-    def get_keys(self) -> set[str]:
+    def get_keys(self) -> Set[str]:
         """Get all non-expired cache keys.
 
         Returns:

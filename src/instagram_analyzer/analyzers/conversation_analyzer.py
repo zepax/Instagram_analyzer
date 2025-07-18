@@ -199,7 +199,7 @@ class ThreadReconstructionEngine:
 
         return threads
 
-    def _extract_message_topics(self, message: Message) -> set[str]:
+    def _extract_message_topics(self, message: Message) -> Set[str]:
         """Extract topics/keywords from a message."""
         topics = set()
 
