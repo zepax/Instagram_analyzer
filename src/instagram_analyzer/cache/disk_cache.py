@@ -352,7 +352,7 @@ class DiskCache:
 
         return True
 
-    def get_keys(self) -> Set[str]:
+    def get_keys(self) -> set[str]:
         """Get all non-expired cache keys.
 
         Returns:
@@ -389,7 +389,7 @@ class DiskCache:
         """
         return self._stats["entry_count"]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -401,9 +401,7 @@ class DiskCache:
             if total_requests > 0:
                 hit_rate = float(self._stats["hits"]) / float(total_requests)
 
-            disk_limit = (
-                float(self.config.disk_limit) if self.config.disk_limit else 1.0
-            )
+            disk_limit = float(self.config.disk_limit) if self.config.disk_limit else 1.0
 
             return {
                 **self._stats,
@@ -416,7 +414,7 @@ class DiskCache:
                 "cache_dir": str(self.cache_dir),
             }
 
-    def _get_entry_info(self, key: str) -> Optional[Dict[str, Any]]:
+    def _get_entry_info(self, key: str) -> Optional[dict[str, Any]]:
         """Get entry information from database."""
         with self._db_lock:
             conn = sqlite3.connect(str(self.db_path))
@@ -446,7 +444,7 @@ class DiskCache:
             finally:
                 conn.close()
 
-    def _is_expired(self, entry_info: Dict[str, Any]) -> bool:
+    def _is_expired(self, entry_info: dict[str, Any]) -> bool:
         """Check if entry has expired."""
         if entry_info["ttl"] is None:
             return False

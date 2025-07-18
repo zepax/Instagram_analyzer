@@ -50,7 +50,7 @@ def exponential_backoff(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
 
             for attempt in range(max_retries + 1):
@@ -196,7 +196,7 @@ class CircuitBreaker:
         """Decorator implementation."""
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             if self.state == "open":
                 if (time.time() - self.last_failure_time) > self.recovery_timeout:
                     self.state = "half-open"
@@ -270,12 +270,12 @@ def safe_file_operation(
             breaker = CircuitBreaker(
                 failure_threshold=5,
                 recovery_timeout=30.0,
-                expected_exception=(IOError, OSError, PermissionError),
+                expected_exception=IOError,
             )
             func = breaker(func)
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             logger.debug(f"Starting {operation_name} operation: {func.__name__}")
 
             try:
@@ -296,17 +296,17 @@ def safe_file_operation(
 
 
 # Convenience decorators for common operations
-def safe_json_load(func: Callable) -> Callable:
+def safe_json_load(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator for safe JSON loading operations."""
     return safe_file_operation("JSON loading", max_retries=2)(func)
 
 
-def safe_file_write(func: Callable) -> Callable:
+def safe_file_write(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator for safe file writing operations."""
     return safe_file_operation("file writing", max_retries=3, circuit_breaker=True)(func)
 
 
-def safe_directory_scan(func: Callable) -> Callable:
+def safe_directory_scan(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator for safe directory scanning operations."""
     return safe_file_operation("directory scanning", max_retries=2)(func)
 
@@ -340,7 +340,7 @@ class RetryableOperation:
         """Enter context."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
         """Exit context with retry logic."""
         if exc_type and issubclass(exc_type, self.exceptions):
             self.attempt += 1

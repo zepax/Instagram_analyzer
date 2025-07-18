@@ -11,7 +11,8 @@ import time
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, Optional, Set, TypeVar
+from typing import Any, Callable, Dict, Generic, Optional, Set, TypeVar, Union
+from weakref import ReferenceType
 
 from ..logging_config import get_logger
 from .cache_config import CacheConfig
@@ -169,7 +170,7 @@ class MemoryCache(Generic[T]):
             self._evict_if_needed(size_bytes)
 
             # Store value (possibly as weak reference)
-            stored_value = value
+            stored_value: Union[T, ReferenceType[T]] = value
             if use_weak_ref and hasattr(value, "__weakref__"):
                 weak_ref = weakref.ref(value, lambda ref: self._cleanup_weak_ref(key))
                 self._weak_refs[key] = weak_ref

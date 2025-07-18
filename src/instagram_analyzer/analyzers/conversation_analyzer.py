@@ -68,7 +68,7 @@ class ThreadReconstructionEngine:
 
     def _time_based_threading(self, messages: list[Message]) -> list[ConversationThread]:
         """Create threads based on temporal gaps."""
-        threads = []
+        threads: list[ConversationThread] = []
         current_thread = None
 
         for message in messages:
@@ -108,7 +108,7 @@ class ThreadReconstructionEngine:
 
     def _topic_based_threading(self, messages: list[Message]) -> list[ConversationThread]:
         """Create threads based on topic similarity."""
-        threads = []
+        threads: list[ConversationThread] = []
 
         # Extract topics/keywords from messages
         message_topics = []
@@ -150,12 +150,13 @@ class ThreadReconstructionEngine:
                 current_topics = msg_topics.copy()
             else:
                 # Add to current thread
-                current_thread.messages.append(message)
-                if message.sender_name not in current_thread.participants:
-                    current_thread.participants.append(message.sender_name)
-                if message.timestamp:
-                    current_thread.end_time = message.timestamp
-                current_topics.update(msg_topics)
+                if current_thread:
+                    current_thread.messages.append(message)
+                    if message.sender_name not in current_thread.participants:
+                        current_thread.participants.append(message.sender_name)
+                    if message.timestamp:
+                        current_thread.end_time = message.timestamp
+                    current_topics.update(msg_topics)
 
         # Add final thread
         if current_thread and len(current_thread.messages) >= self.min_thread_messages:
@@ -167,7 +168,7 @@ class ThreadReconstructionEngine:
         self, messages: list[Message]
     ) -> list[ConversationThread]:
         """Create threads based on interaction patterns (replies, reactions)."""
-        threads = []
+        threads: list[ConversationThread] = []
 
         # Look for interaction patterns
         reply_chains = self._detect_reply_chains(messages)
@@ -310,7 +311,9 @@ class ThreadReconstructionEngine:
 
         return groups
 
-    def _merge_and_optimize_threads(self, *thread_lists) -> list[ConversationThread]:
+    def _merge_and_optimize_threads(
+        self, *thread_lists: list[ConversationThread]
+    ) -> list[ConversationThread]:
         """Merge and optimize threads from different algorithms."""
         all_threads = []
         for thread_list in thread_lists:
@@ -321,7 +324,7 @@ class ThreadReconstructionEngine:
 
         # Remove duplicate threads and merge overlapping ones
         merged_threads = []
-        used_messages = set()
+        used_messages: set[str] = set()
 
         # Sort threads by start time
         sorted_threads = sorted(all_threads, key=lambda t: t.start_time or datetime.min)
@@ -386,7 +389,7 @@ class ConversationAnalyzer:
         self.data_root = data_root
         self.parser = ConversationParser(data_root)
         self.thread_engine = ThreadReconstructionEngine()
-        self.conversations = []
+        self.conversations: list[Conversation] = []
         self.analysis = None
 
     def load_conversations(

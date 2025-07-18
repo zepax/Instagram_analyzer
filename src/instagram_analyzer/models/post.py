@@ -25,7 +25,7 @@ class Post(BaseModel):
 
     # Core content
     caption: Optional[str] = Field(None, description="Post caption text")
-    media: List[Media] = Field(..., description="Media files in the post")
+    media: list[Media] = Field(..., description="Media files in the post")
     timestamp: datetime = Field(..., description="When the post was published")
 
     # Post metadata
@@ -34,27 +34,27 @@ class Post(BaseModel):
     location: Optional[str] = Field(None, description="Location tag")
 
     # Engagement
-    likes: List[Like] = Field(default_factory=list, description="Likes on the post")
-    comments: List[Comment] = Field(
+    likes: list[Like] = Field(default_factory=list, description="Likes on the post")
+    comments: list[Comment] = Field(
         default_factory=list, description="Comments on the post"
     )
     likes_count: int = Field(0, ge=0, description="Total number of likes")
     comments_count: int = Field(0, ge=0, description="Total number of comments")
 
     # Content analysis
-    hashtags: List[str] = Field(default_factory=list, description="Hashtags in caption")
-    mentions: List[str] = Field(default_factory=list, description="Mentioned users")
+    hashtags: list[str] = Field(default_factory=list, description="Hashtags in caption")
+    mentions: list[str] = Field(default_factory=list, description="Mentioned users")
 
     # Privacy and settings
     is_sponsored: bool = Field(False, description="Whether this is a sponsored post")
     audience: Optional[str] = Field(None, description="Post audience setting")
 
     # Raw data storage
-    raw_data: Dict[str, Any] = Field(default_factory=dict, description="Raw post data")
+    raw_data: dict[str, Any] = Field(default_factory=dict, description="Raw post data")
 
     @field_validator("media")
     @classmethod
-    def validate_media(cls, v: List[Media]) -> List[Media]:
+    def validate_media(cls, v: list[Media]) -> list[Media]:
         """Validate that post has at least one media item."""
         if not v:
             raise ValueError("Post must have at least one media item")
@@ -78,9 +78,7 @@ class Post(BaseModel):
     @property
     def has_video(self) -> bool:
         """Check if post contains video content."""
-        return any(
-            m.media_type in [MediaType.VIDEO, MediaType.REEL] for m in self.media
-        )
+        return any(m.media_type in [MediaType.VIDEO, MediaType.REEL] for m in self.media)
 
     @property
     def caption_word_count(self) -> int:
@@ -119,7 +117,7 @@ class Story(BaseModel):
     replies_count: int = Field(0, ge=0, description="Number of story replies")
 
     # Raw data
-    raw_data: Dict[str, Any] = Field(default_factory=dict, description="Raw story data")
+    raw_data: dict[str, Any] = Field(default_factory=dict, description="Raw story data")
 
     @property
     def is_expired(self) -> bool:
@@ -144,7 +142,7 @@ class Reel(BaseModel):
     audio_artist: Optional[str] = Field(None, description="Audio track artist")
 
     # Reel features
-    effects: List[str] = Field(default_factory=list, description="Applied effects")
+    effects: list[str] = Field(default_factory=list, description="Applied effects")
     music_id: Optional[str] = Field(None, description="Music track ID")
     is_original_audio: bool = Field(False, description="Whether audio is original")
 
@@ -155,11 +153,11 @@ class Reel(BaseModel):
     plays_count: int = Field(0, ge=0, description="Number of plays")
 
     # Content analysis
-    hashtags: List[str] = Field(default_factory=list, description="Hashtags in caption")
-    mentions: List[str] = Field(default_factory=list, description="Mentioned users")
+    hashtags: list[str] = Field(default_factory=list, description="Hashtags in caption")
+    mentions: list[str] = Field(default_factory=list, description="Mentioned users")
 
     # Raw data
-    raw_data: Dict[str, Any] = Field(default_factory=dict, description="Raw reel data")
+    raw_data: dict[str, Any] = Field(default_factory=dict, description="Raw reel data")
 
     @field_validator("video")
     @classmethod

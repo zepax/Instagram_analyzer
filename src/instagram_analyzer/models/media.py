@@ -32,9 +32,7 @@ class Media(BaseModel):
     # Technical details
     width: Optional[int] = Field(None, gt=0, description="Media width in pixels")
     height: Optional[int] = Field(None, gt=0, description="Media height in pixels")
-    duration: Optional[float] = Field(
-        None, gt=0, description="Video duration in seconds"
-    )
+    duration: Optional[float] = Field(None, gt=0, description="Video duration in seconds")
     file_size: Optional[int] = Field(None, gt=0, description="File size in bytes")
 
     # Instagram specific

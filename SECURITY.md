@@ -172,7 +172,7 @@ We follow responsible disclosure practices:
 
 ---
 
-**Last Updated**: July 2025  
-**Security Policy Version**: 2.0  
+**Last Updated**: July 2025
+**Security Policy Version**: 2.0
 
 Thank you for helping keep Instagram Analyzer secure!

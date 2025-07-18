@@ -31,6 +31,5 @@ def test_network_analyzer_basic(sample_posts):
     assert "edges" in result
     assert any(node["id"] == "alice" for node in result["nodes"])
     assert any(
-        edge["source"] == "alice" or edge["target"] == "alice"
-        for edge in result["edges"]
+        edge["source"] == "alice" or edge["target"] == "alice" for edge in result["edges"]
     )

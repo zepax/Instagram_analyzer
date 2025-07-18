@@ -279,9 +279,7 @@ class ConversationExtractor:
             )
 
         # Add filter information
-        stats["active_filters"] = {
-            k: v for k, v in self.filters.items() if v is not None
-        }
+        stats["active_filters"] = {k: v for k, v in self.filters.items() if v is not None}
 
         return stats
 
@@ -461,9 +459,7 @@ class ConversationExtractor:
         # Placeholder for anonymization logic
         return conversations.copy()
 
-    def _anonymize_analysis(
-        self, analysis: ConversationAnalysis
-    ) -> ConversationAnalysis:
+    def _anonymize_analysis(self, analysis: ConversationAnalysis) -> ConversationAnalysis:
         """Apply anonymization to analysis results."""
         # Replace participant names with generic identifiers
         if analysis.most_frequent_contacts:

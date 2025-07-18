@@ -107,7 +107,7 @@ class CacheConfig:
         """Convert bytes to megabytes for display."""
         return size_bytes / (1024 * 1024)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
             "memory_limit": self.memory_limit,
@@ -133,7 +133,7 @@ class CacheConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "CacheConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "CacheConfig":
         """Create configuration from dictionary."""
         # Convert string path back to Path object
         if "disk_cache_dir" in data and isinstance(data["disk_cache_dir"], str):

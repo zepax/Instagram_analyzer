@@ -26,9 +26,9 @@ class WorkflowValidator:
     def __init__(self, project_root: Path):
         """Initialize the validator."""
         self.project_root = project_root
-        self.errors: List[str] = []
-        self.warnings: List[str] = []
-        self.info: List[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
+        self.info: list[str] = []
 
     def validate_all(self) -> bool:
         """Run all validation checks."""

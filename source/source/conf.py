@@ -6,28 +6,27 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Instagram Analyzer'
-copyright = '2025, Equipo Instagram Analyzer'
-author = 'Equipo Instagram Analyzer'
+project = "Instagram Analyzer"
+copyright = "2025, Equipo Instagram Analyzer"
+author = "Equipo Instagram Analyzer"
 
-version = '0.2.03'
-release = '0.2.03'
+version = "0.2.03"
+release = "0.2.03"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
 ]
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
-
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
-html_static_path = ['_static']
+html_theme = "alabaster"
+html_static_path = ["_static"]

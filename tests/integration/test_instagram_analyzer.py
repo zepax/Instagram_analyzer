@@ -10,12 +10,98 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from instagram_analyzer.core import InstagramAnalyzer
-from instagram_analyzer.exceptions import (
-    DataNotFoundError,
-    InsufficientDataError,
-    InvalidDataFormatError,
-)
-from instagram_analyzer.models import Media, MediaType, Post, Profile, Reel, Story
+from instagram_analyzer.exceptions import DataNotFoundError, InvalidDataFormatError
+from instagram_analyzer.models import ContentType, Media, MediaType, Post, Profile, Reel
+
+
+# Helper functions for creating test objects with required parameters
+def create_test_media(uri="test.jpg", media_type=MediaType.IMAGE, timestamp=None):
+    """Create a Media object with all required parameters."""
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc)
+
+    return Media(
+        uri=uri,
+        media_type=media_type,
+        creation_timestamp=timestamp,
+        taken_at=None,
+        title=None,
+        width=None,
+        height=None,
+        duration=None,
+        file_size=None,
+        thumbnail_uri=None,
+        ig_media_id=None
+    )
+
+
+def create_test_post(media=None, timestamp=None, caption="Test post"):
+    """Create a Post object with all required parameters."""
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc)
+
+    if media is None:
+        media = [create_test_media()]
+
+    return Post(
+        media=media,
+        timestamp=timestamp,
+        caption=caption,
+        post_id=None,
+        content_type=ContentType.POST,
+        location=None,
+        likes_count=0,
+        comments_count=0,
+        is_sponsored=False,
+        audience=None
+    )
+
+
+def create_test_reel(video=None, timestamp=None, caption="Test reel"):
+    """Create a Reel object with all required parameters."""
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc)
+
+    if video is None:
+        video = create_test_media(uri="reel.mp4", media_type=MediaType.VIDEO)
+
+    return Reel(
+        video=video,
+        timestamp=timestamp,
+        caption=caption,
+        reel_id=None,
+        audio_title=None,
+        audio_artist=None,
+        likes_count=0,
+        comments_count=0,
+        music_id=None,
+        is_original_audio=False,
+        shares_count=0,
+        plays_count=0
+    )
+
+
+def create_test_profile(username="testuser"):
+    """Create a Profile object with all required parameters."""
+    return Profile(
+        username=username,
+        name=None,
+        bio=None,
+        website=None,
+        email=None,
+        phone_number=None,
+        followers_count=None,
+        following_count=None,
+        posts_count=None,
+        is_private=False,
+        is_verified=False,
+        is_business=False,
+        date_joined=None,
+        last_active=None,
+        profile_pic_url=None,
+        external_url=None,
+        category=None
+    )
 
 
 @pytest.fixture
@@ -220,12 +306,27 @@ class TestInstagramAnalyzerAnalysis:
                         uri="test.jpg",
                         media_type=MediaType.IMAGE,
                         creation_timestamp=datetime.now(timezone.utc),
+                        # Add required parameters with default values
+                        taken_at=None,
+                        title=None,
+                        width=None,
+                        height=None,
+                        duration=None,
+                        file_size=None,
+                        thumbnail_uri=None,
+                        ig_media_id=None
                     )
                 ],
                 timestamp=datetime.now(timezone.utc),
                 caption="Test post",
                 likes_count=10,
                 comments_count=5,
+                # Add required parameters with default values
+                post_id=None,
+                content_type=ContentType.POST,
+                location=None,
+                is_sponsored=False,
+                audience=None
             )
         ]
         analyzer.reels = [
@@ -234,11 +335,26 @@ class TestInstagramAnalyzerAnalysis:
                     uri="reel.mp4",
                     media_type=MediaType.VIDEO,
                     creation_timestamp=datetime.now(timezone.utc),
+                    taken_at=None,
+                    title=None,
+                    width=None,
+                    height=None,
+                    duration=None,
+                    file_size=None,
+                    thumbnail_uri=None,
+                    ig_media_id=None
                 ),
                 timestamp=datetime.now(timezone.utc),
                 caption="Test reel",
                 likes_count=7,
                 comments_count=2,
+                reel_id=None,
+                audio_title=None,
+                audio_artist=None,
+                music_id=None,
+                is_original_audio=False,
+                shares_count=0,
+                plays_count=0
             )
         ]
 
@@ -266,20 +382,11 @@ class TestInstagramAnalyzerAnalysis:
         """Test analysis with media inclusion."""
         analyzer = InstagramAnalyzer(mock_instagram_data)
 
-        # Mock some data
-        analyzer.posts = [
-            Post(
-                media=[
-                    Media(
-                        uri="test.jpg",
-                        media_type=MediaType.IMAGE,
-                        creation_timestamp=datetime.now(timezone.utc),
-                    )
-                ],
-                timestamp=datetime.now(timezone.utc),
-                caption="Test post",
-            )
-        ]
+        # Mock some data using helper functions
+        timestamp = datetime.now(timezone.utc)
+        media = create_test_media(uri="test.jpg", timestamp=timestamp)
+        post = create_test_post(media=[media], timestamp=timestamp, caption="Test post")
+        analyzer.posts = [post]
 
         results = analyzer.analyze(include_media=True)
 
@@ -336,26 +443,17 @@ class TestInstagramAnalyzerBasicInfo:
         analyzer = InstagramAnalyzer(mock_instagram_data)
 
         # Mock profile and content
-        analyzer.profile = Profile(
-            username="testuser",
-            name="Test User",
-            is_verified=True,
-            is_private=False,
-        )
+        profile = create_test_profile(username="testuser")
+        profile.name = "Test User"
+        profile.is_verified = True
+        profile.is_private = False
+        analyzer.profile = profile
 
         test_time = datetime.now(timezone.utc)
-        analyzer.posts = [
-            Post(
-                media=[
-                    Media(
-                        uri="test.jpg",
-                        media_type=MediaType.IMAGE,
-                        creation_timestamp=test_time,
-                    )
-                ],
-                timestamp=test_time,
-            )
-        ]
+        # Create posts with helper function
+        media = create_test_media(uri="test.jpg", timestamp=test_time)
+        post = create_test_post(media=[media], timestamp=test_time, caption="")
+        analyzer.posts = [post]
 
         info = analyzer.get_basic_info()
 
@@ -383,16 +481,8 @@ class TestInstagramAnalyzerBasicInfo:
 
         # Create a mock post without a timestamp by setting it after creation
         test_time = datetime.now(timezone.utc)
-        post = Post(
-            media=[
-                Media(
-                    uri="test.jpg",
-                    media_type=MediaType.IMAGE,
-                    creation_timestamp=test_time,
-                )
-            ],
-            timestamp=test_time,
-        )
+        media = create_test_media(uri="test.jpg", timestamp=test_time)
+        post = create_test_post(media=[media], timestamp=test_time)
 
         # Mock the timestamp to be None for this test
         post.__dict__["timestamp"] = None
@@ -511,7 +601,7 @@ class TestInstagramAnalyzerErrorHandling:
             # Always restore permissions for cleanup
             try:
                 restricted_dir.chmod(0o755)
-            except:
+            except PermissionError:
                 pass
 
     def test_analyzer_with_memory_constraints(self, mock_instagram_data):
@@ -527,7 +617,8 @@ class TestInstagramAnalyzerErrorHandling:
 
     def test_analyzer_logging_integration(self, mock_instagram_data, caplog):
         """Test that logging is properly integrated."""
-        analyzer = InstagramAnalyzer(mock_instagram_data)
+        # Initialize analyzer - used to trigger and test logging messages
+        InstagramAnalyzer(mock_instagram_data)
 
         # Check that initialization was logged
         assert "Initializing InstagramAnalyzer" in caplog.text
@@ -539,18 +630,10 @@ class TestInstagramAnalyzerErrorHandling:
         # Simulate large dataset
         large_posts = []
         for i in range(1000):
-            post = Post(
-                media=[
-                    Media(
-                        uri=f"test_{i}.jpg",
-                        media_type=MediaType.IMAGE,
-                        creation_timestamp=datetime.now(timezone.utc),
-                    )
-                ],
-                timestamp=datetime.now(timezone.utc),
-                caption=f"Test post {i}",
-                likes_count=i,
-            )
+            timestamp = datetime.now(timezone.utc)
+            media = create_test_media(uri=f"test_{i}.jpg", timestamp=timestamp)
+            post = create_test_post(media=[media], timestamp=timestamp, caption=f"Test post {i}")
+            post.likes_count = i
             large_posts.append(post)
 
         analyzer.posts = large_posts

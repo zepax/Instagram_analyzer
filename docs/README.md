@@ -295,6 +295,6 @@ This documentation is licensed under the same MIT License as the Instagram Analy
 
 ---
 
-*Last updated: July 18, 2025*  
-*Version: 0.2.03*  
+*Last updated: July 18, 2025*
+*Version: 0.2.03*
 *Documentation for Instagram Analyzer*
