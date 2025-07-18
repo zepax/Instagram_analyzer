@@ -132,9 +132,10 @@ jobs:
           severity: "CRITICAL,HIGH"
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           sarif_file: "trivy-results.sarif"
+        continue-on-error: true
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
