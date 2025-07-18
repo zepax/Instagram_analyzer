@@ -79,7 +79,10 @@ class MemoryCache(Generic[T]):
         }
 
         # Weak references for memory management
-        self._weak_refs: dict[str, weakref.ref] = {}
+        self._weak_refs: Dict[str, weakref.ref] = {}
+
+        # Cleanup thread
+        self._cleanup_thread: Optional[threading.Thread] = None
 
         # Start cleanup thread if enabled
         if config.cleanup_interval > 0:
@@ -122,7 +125,18 @@ class MemoryCache(Generic[T]):
                 self._data.move_to_end(key)
 
             self._stats["hits"] += 1
-            return entry.value
+
+            # Handle weak references
+            if isinstance(entry.value, weakref.ref):
+                referenced_value = entry.value()
+                if referenced_value is None:
+                    # Object was garbage collected
+                    self._remove_entry(key)
+                    self._stats["misses"] += 1
+                    return default
+                return referenced_value  # type: ignore[no-any-return]
+
+            return entry.value  # type: ignore[no-any-return]
 
     def set(
         self, key: str, value: T, ttl: Optional[int] = None, use_weak_ref: bool = False
@@ -239,7 +253,7 @@ class MemoryCache(Generic[T]):
 
             return True
 
-    def keys(self) -> set[str]:
+    def keys(self) -> Set[str]:
         """Get all non-expired cache keys.
 
         Returns:

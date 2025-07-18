@@ -75,7 +75,7 @@ repos:
     rev: v3.17.0
     hooks:
       - id: pyupgrade
-        args: [--py39-plus]
+        args: [--py39-plus, --keep-runtime-typing]
 
 # Configuration for specific tools
 default_stages: [commit]
