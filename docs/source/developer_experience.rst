@@ -15,6 +15,13 @@ Introducción
 
 El objetivo es ofrecer una experiencia de desarrollo fluida, productiva y profesional, siguiendo estándares enterprise y facilitando la colaboración.
 
+AI Multi-Agent System
+=====================
+
+El proyecto integra un sistema multi-agente usando GitHub Actions y asistentes de IA para revisión de código, documentación, pruebas y optimización.
+Para solicitar una revisión automatizada o documentación, simplemente añade la etiqueta apropiada (ej. `ai:review`, `ai:docs`) a tu issue o pull request.
+Ve el README principal y la documentación de WORKFLOW para detalles.
+
 README Mejorado
 ===============
 

@@ -1,0 +1,420 @@
+name: AI Code Review Agent
+# Agente especializado en auditar y revisar código
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  workflow_run:
+    workflows: ["AI Agent Orchestrator"]
+    types:
+      - completed
+
+jobs:
+  should-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-review-task == 'true' }}
+      issue-number: ${{ steps.get-issue.outputs.issue-number }}
+      pr-number: ${{ steps.get-pr.outputs.pr-number }}
+      context: ${{ steps.get-context.outputs.context }}
+    steps:
+      - id: check-label
+        if: github.event_name != 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const hasLabel = context.payload.label &&
+                            context.payload.label.name === 'ai:review';
+            core.setOutput('has-label', hasLabel.toString());
+
+      - id: check-workflow
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const workflowRun = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+
+            // Intentar encontrar el contexto del orquestador
+            let hasReviewTask = false;
+            try {
+              // Obtener los jobs de la ejecución del workflow
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id
+              });
+
+              // Buscar en los outputs del job triage
+              for (const job of jobs.data.jobs) {
+                if (job.name === 'triage') {
+                  // Si el job tiene steps con outputs
+                  const steps = job.steps || [];
+                  for (const step of steps) {
+                    if (step.name === 'Analyze request and assign labels' && step.outputs) {
+                      const assignedLabels = step.outputs.assigned_labels || '';
+                      hasReviewTask = assignedLabels.includes('ai:review');
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`Error checking workflow outputs: ${error}`);
+            }
+
+            core.setOutput('has-review-task', hasReviewTask.toString());
+
+      - id: get-issue
+        if: steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-review-task == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let issueNumber;
+
+            if (context.payload.issue) {
+              issueNumber = context.payload.issue.number;
+            } else if (context.payload.pull_request) {
+              issueNumber = null; // Si es un PR, lo manejamos por separado
+            } else {
+              // Intentar obtener del contexto del orquestador
+              issueNumber = null;
+            }
+
+            core.setOutput('issue-number', issueNumber ? issueNumber.toString() : '');
+
+      - id: get-pr
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setOutput('pr-number', context.payload.pull_request.number.toString());
+
+      - id: get-context
+        if: steps.get-issue.outputs.issue-number != '' || steps.get-pr.outputs.pr-number != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issueNumber = parseInt(steps.get-issue.outputs.issue-number);
+            const prNumber = parseInt(steps.get-pr.outputs.pr-number);
+
+            let targetNumber = issueNumber || prNumber;
+            if (!targetNumber) {
+              core.setOutput('context', '{}');
+              return;
+            }
+
+            // Obtener todos los comentarios y buscar el contexto del orquestador
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: targetNumber
+            });
+
+            let taskContext = {};
+            for (const comment of comments.data) {
+              if (comment.body.includes('AI Orchestrator Activado')) {
+                // Extraer JSON del comentario
+                const match = comment.body.match(/```json\n([\s\S]*?)\n```/);
+                if (match && match[1]) {
+                  try {
+                    taskContext = JSON.parse(match[1]);
+                    break;
+                  } catch (e) {
+                    console.log('Error parsing context JSON');
+                  }
+                }
+              }
+            }
+
+            core.setOutput('context', JSON.stringify(taskContext));
+
+  review-code:
+    needs: should-run
+    if: needs.should-run.outputs.run-job == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Obtener todo el historial para poder ver los cambios
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+          pip install pylint mypy bandit flake8 pydocstyle black
+
+      - name: Parse review context
+        id: parse-context
+        run: |
+          ISSUE_NUMBER="${{ needs.should-run.outputs.issue-number }}"
+          PR_NUMBER="${{ needs.should-run.outputs.pr-number }}"
+          CONTEXT='${{ needs.should-run.outputs.context }}'
+
+          # Extraer información relevante
+          TARGET_MODULE=$(echo $CONTEXT | jq -r '.targetModule // ""')
+          REVIEW_DEPTH=$(echo $CONTEXT | jq -r '.reviewDepth // "normal"')
+
+          echo "target_module=$TARGET_MODULE" >> $GITHUB_OUTPUT
+          echo "review_depth=$REVIEW_DEPTH" >> $GITHUB_OUTPUT
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "review_target=pr" >> $GITHUB_OUTPUT
+            echo "target_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          else
+            echo "review_target=issue" >> $GITHUB_OUTPUT
+            echo "target_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -z "$TARGET_MODULE" ]; then
+            echo "No se especificó módulo objetivo, realizaré una revisión general"
+          else
+            echo "Revisaré específicamente el módulo $TARGET_MODULE"
+          fi
+
+          echo "Profundidad de revisión: $REVIEW_DEPTH"
+
+      - name: Determine files to review
+        id: determine-files
+        run: |
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+          REVIEW_TARGET="${{ steps.parse-context.outputs.review_target }}"
+          TARGET_NUMBER="${{ steps.parse-context.outputs.target_number }}"
+
+          if [ "$REVIEW_TARGET" = "pr" ]; then
+            # Si estamos revisando un PR, obtener los archivos modificados
+            echo "Obteniendo archivos modificados en el PR #$TARGET_NUMBER"
+            git fetch origin pull/$TARGET_NUMBER/head:pr-$TARGET_NUMBER
+            git checkout pr-$TARGET_NUMBER
+            FILES_TO_REVIEW=$(git diff --name-only origin/${{ github.ref_name }}...HEAD | grep "\.py$" || echo "")
+          else
+            # Si estamos revisando desde un issue, seleccionar archivos basados en el módulo
+            if [ -n "$TARGET_MODULE" ]; then
+              MODULE_PATH="src/instagram_analyzer/$TARGET_MODULE"
+              if [ -d "$MODULE_PATH" ]; then
+                echo "Revisando módulo específico: $MODULE_PATH"
+                FILES_TO_REVIEW=$(find "$MODULE_PATH" -name "*.py" | tr '\n' ' ')
+              else
+                echo "El módulo especificado no existe, realizando revisión general"
+                FILES_TO_REVIEW=$(find src/instagram_analyzer -name "*.py" | tr '\n' ' ')
+              fi
+            else
+              # Revisión general (limitada a algunos archivos para no sobrecargar)
+              echo "Realizando revisión general de archivos clave"
+              FILES_TO_REVIEW=$(find src/instagram_analyzer -name "*.py" | head -20 | tr '\n' ' ')
+            fi
+          fi
+
+          if [ -z "$FILES_TO_REVIEW" ]; then
+            echo "No se encontraron archivos Python para revisar"
+            echo "files_found=false" >> $GITHUB_OUTPUT
+          else
+            echo "files_found=true" >> $GITHUB_OUTPUT
+            echo "files_to_review<<EOF" >> $GITHUB_OUTPUT
+            echo "$FILES_TO_REVIEW" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run static analysis tools
+        if: steps.determine-files.outputs.files_found == 'true'
+        id: static-analysis
+        run: |
+          FILES_TO_REVIEW="${{ steps.determine-files.outputs.files_to_review }}"
+          REVIEW_DEPTH="${{ steps.parse-context.outputs.review_depth }}"
+
+          mkdir -p review_results
+
+          echo "Ejecutando herramientas de análisis estático..."
+
+          # Pylint para análisis general de código
+          echo "Ejecutando Pylint..."
+          pylint $FILES_TO_REVIEW --output=review_results/pylint.txt --exit-zero || true
+
+          # Mypy para verificación de tipos
+          echo "Ejecutando Mypy..."
+          mypy $FILES_TO_REVIEW --show-error-codes > review_results/mypy.txt 2>&1 || true
+
+          # Bandit para análisis de seguridad
+          echo "Ejecutando Bandit..."
+          bandit -r $FILES_TO_REVIEW -f txt -o review_results/bandit.txt || true
+
+          # Flake8 para estilo de código
+          echo "Ejecutando Flake8..."
+          flake8 $FILES_TO_REVIEW > review_results/flake8.txt || true
+
+          # Pydocstyle para verificación de docstrings
+          echo "Ejecutando Pydocstyle..."
+          pydocstyle $FILES_TO_REVIEW > review_results/pydocstyle.txt 2>&1 || true
+
+          # Para revisión profunda, agregamos análisis básico de complejidad
+          if [ "$REVIEW_DEPTH" = "deep" ]; then
+            echo "Realizando análisis básico de complejidad..."
+            echo "Archivos con mayor número de líneas:" > review_results/complexity.txt
+            wc -l $FILES_TO_REVIEW | sort -nr >> review_results/complexity.txt
+
+            echo -e "\nFunciones por archivo:" >> review_results/complexity.txt
+            for file in $FILES_TO_REVIEW; do
+              echo "Archivo: $file" >> review_results/complexity.txt
+              grep -c "def " "$file" >> review_results/complexity.txt
+            done
+          fi
+
+          echo "Análisis estático completado"
+          echo "analysis_completed=true" >> $GITHUB_OUTPUT
+
+      - name: Generate review summary
+        if: steps.static-analysis.outputs.analysis_completed == 'true'
+        id: generate-summary
+        run: |
+          echo "Generando resumen de la revisión..."
+
+          # Combinar resultados en un resumen
+          cat > review_results/summary.md << EOF
+          # 📊 Revisión de Código Automatizada
+
+          ## 🔍 Resumen
+
+          El AI Code Review Agent ha analizado los siguientes archivos:
+          \`\`\`
+          ${{ steps.determine-files.outputs.files_to_review }}
+          \`\`\`
+
+          ## 📝 Principales Hallazgos
+
+          ### Pylint
+          \`\`\`
+          $(head -20 review_results/pylint.txt 2>/dev/null || echo "No se encontraron problemas")
+          \`\`\`
+
+          ### Errores de Tipo (MyPy)
+          \`\`\`
+          $(head -20 review_results/mypy.txt 2>/dev/null || echo "No se encontraron problemas de tipado")
+          \`\`\`
+
+          ### Problemas de Seguridad (Bandit)
+          \`\`\`
+          $(head -20 review_results/bandit.txt 2>/dev/null || echo "No se encontraron problemas de seguridad")
+          \`\`\`
+
+          ### Estilo de Código (Flake8)
+          \`\`\`
+          $(head -20 review_results/flake8.txt 2>/dev/null || echo "No se encontraron problemas de estilo")
+          \`\`\`
+
+          ### Documentación (Pydocstyle)
+          \`\`\`
+          $(head -20 review_results/pydocstyle.txt 2>/dev/null || echo "No se encontraron problemas de documentación")
+          \`\`\`
+
+          EOF
+
+          # Agregar análisis de complejidad si existe
+          if [ -f "review_results/complexity.txt" ]; then
+            cat >> review_results/summary.md << EOF
+
+          ### Complejidad de Código
+          \`\`\`
+          $(cat review_results/complexity.txt)
+          \`\`\`
+          EOF
+          fi
+
+          # Agregar recomendaciones
+          cat >> review_results/summary.md << EOF
+
+          ## 🚀 Recomendaciones
+
+          1. **Estilo de código**: Considerar el uso de `black` para formateo automático.
+          2. **Documentación**: Asegurar que todas las funciones públicas tengan docstrings completas.
+          3. **Tipado**: Añadir anotaciones de tipo para mejorar la mantenibilidad.
+          4. **Tests**: Aumentar la cobertura de pruebas para el código nuevo y modificado.
+          5. **Refactorización**: Dividir funciones largas en componentes más pequeños y reutilizables.
+
+          ## 📈 Próximos Pasos
+
+          1. Corregir los problemas críticos identificados.
+          2. Programar una revisión manual para áreas complejas.
+          3. Actualizar la documentación según sea necesario.
+          4. Ejecutar pruebas completas después de las correcciones.
+
+          EOF
+
+          echo "review_summary_generated=true" >> $GITHUB_OUTPUT
+
+      - name: Comment review on PR/Issue
+        if: steps.generate-summary.outputs.review_summary_generated == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reviewTarget = '${{ steps.parse-context.outputs.review_target }}';
+            const targetNumber = parseInt('${{ steps.parse-context.outputs.target_number }}');
+
+            if (!targetNumber) {
+              console.log('No se especificó un número de issue/PR válido');
+              return;
+            }
+
+            const reviewSummary = fs.readFileSync('review_results/summary.md', 'utf8');
+
+            // Crear un comentario con el resumen de la revisión
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: targetNumber,
+              body: reviewSummary
+            });
+
+            // Si es un PR, también podemos hacer una revisión formal
+            if (reviewTarget === 'pr') {
+              try {
+                await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: targetNumber,
+                  event: 'COMMENT',
+                  body: '🤖 **AI Code Review Agent** ha realizado una revisión automática. Por favor revisa el comentario detallado en este PR.'
+                });
+              } catch (error) {
+                console.log('Error al crear revisión formal del PR:', error);
+              }
+            }
+
+            console.log(`Revisión completada y comentada en ${reviewTarget} #${targetNumber}`);
+
+      - name: Create PR with fixes (if issue review)
+        if: steps.generate-summary.outputs.review_summary_generated == 'true' && steps.parse-context.outputs.review_target == 'issue'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "fix: Correcciones automáticas del AI Code Review Agent"
+          title: "Mejoras de código propuestas por el AI Code Review Agent"
+          body: |
+            Este PR contiene correcciones automáticas y sugerencias propuestas por el AI Code Review Agent.
+
+            Relacionado con #${{ steps.parse-context.outputs.target_number }}
+
+            ## 🛠️ Cambios realizados:
+
+            - Correcciones de estilo de código
+            - Mejoras de formato
+            - Sugerencias de refactorización
+            - Correcciones de documentación
+
+            Por favor revisa los cambios propuestos y realiza los ajustes necesarios antes de aprobar.
+          branch: ai-review-fixes-issue-${{ steps.parse-context.outputs.target_number }}
+          base: v0.2.05 # Usar la rama principal del proyecto
+          labels: ai:review,automated-pr
+          delete-branch: true

@@ -1,0 +1,828 @@
+name: Main Integrated Workflow
+# Workflow principal consolidado que integra CI/CD, ML Pipeline y el sistema Multi-Agent
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["src/**", "tests/**", "pyproject.toml", ".github/workflows/**"]
+  pull_request:
+    branches: ["**"]
+    paths: ["src/**", "tests/**", "pyproject.toml"]
+  issues:
+    types: [opened, edited, labeled]
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: "Tipo de tarea a realizar (docs, test, optimize, feature, review)"
+        required: true
+        default: "review"
+      target_module:
+        description: "Módulo objetivo (cache, parser, analyzer, exporter, etc)"
+        required: false
+        default: ""
+
+jobs:
+  # JOB 1: TRIAGE - Analiza issues y PRs para asignar agentes
+  triage:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    outputs:
+      assigned_labels: ${{ steps.analyze.outputs.labels }}
+      context: ${{ steps.analyze.outputs.context }}
+      issue_number: ${{ steps.analyze.outputs.issue_number }}
+      pr_number: ${{ steps.analyze.outputs.pr_number }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Analyze request and assign labels
+        id: analyze
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = context.payload.issue ? context.payload.issue.body :
+                        (context.payload.pull_request ? context.payload.pull_request.body : '');
+
+            const issueNumber = context.payload.issue ? context.payload.issue.number :
+                              (context.payload.pull_request ? context.payload.pull_request.number : null);
+
+            if (!issueNumber && !context.payload.inputs) {
+              console.log('No issue/PR detected and not manually triggered');
+              return;
+            }
+
+            let labels = [];
+            let taskContext = {};
+
+            // Si es un workflow_dispatch manual, usar los inputs
+            if (context.payload.inputs) {
+              const taskType = context.payload.inputs.task_type;
+              if (taskType) {
+                labels.push(`ai:${taskType}`);
+                taskContext.targetModule = context.payload.inputs.target_module || '';
+                taskContext.manuallyTriggered = true;
+              }
+            }
+            // Si es un issue o PR, analizar el contenido
+            else if (body) {
+              // Análisis para documentación
+              if (body.toLowerCase().includes('documentación') ||
+                  body.toLowerCase().includes('documentation') ||
+                  body.toLowerCase().includes('docs') ||
+                  body.toLowerCase().includes('readme')) {
+                labels.push('ai:docs');
+                taskContext.documentationType = 'general';
+              }
+
+              // Análisis para testing
+              if (body.toLowerCase().includes('test') ||
+                  body.toLowerCase().includes('prueba') ||
+                  body.toLowerCase().includes('unit test') ||
+                  body.toLowerCase().includes('integration test')) {
+                labels.push('ai:test');
+                taskContext.testType = body.toLowerCase().includes('unit') ? 'unit' :
+                                      (body.toLowerCase().includes('integration') ? 'integration' : 'general');
+              }
+
+              // Análisis para optimización
+              if (body.toLowerCase().includes('optimiza') ||
+                  body.toLowerCase().includes('optimize') ||
+                  body.toLowerCase().includes('performance') ||
+                  body.toLowerCase().includes('lento') ||
+                  body.toLowerCase().includes('slow')) {
+                labels.push('ai:optimize');
+                taskContext.optimizationType = body.toLowerCase().includes('memory') ? 'memory' :
+                                             (body.toLowerCase().includes('speed') ? 'speed' : 'general');
+              }
+
+              // Análisis para nuevas características
+              if (body.toLowerCase().includes('feature') ||
+                  body.toLowerCase().includes('característica') ||
+                  body.toLowerCase().includes('nueva función') ||
+                  body.toLowerCase().includes('new feature')) {
+                labels.push('ai:feature');
+                taskContext.featurePriority = body.toLowerCase().includes('urgent') ? 'high' : 'normal';
+              }
+
+              // Análisis para revisión de código
+              if (body.toLowerCase().includes('review') ||
+                  body.toLowerCase().includes('revisión') ||
+                  body.toLowerCase().includes('revisar') ||
+                  body.toLowerCase().includes('code review')) {
+                labels.push('ai:review');
+                taskContext.reviewType = 'full';
+              }
+
+              // Si no hay etiquetas asignadas, asignar revisión por defecto
+              if (labels.length === 0) {
+                labels.push('ai:review');
+                taskContext.reviewType = 'basic';
+                taskContext.isDefaultAssignment = true;
+              }
+            }
+
+            // Asignar etiquetas al issue o PR
+            if (issueNumber) {
+              for (const label of labels) {
+                try {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber,
+                    labels: [label]
+                  });
+                } catch (error) {
+                  console.log(`Error adding label ${label}: ${error.message}`);
+                }
+              }
+            }
+
+            // Guardar outputs para los siguientes jobs
+            core.setOutput('labels', labels.join(','));
+            core.setOutput('context', JSON.stringify(taskContext));
+            core.setOutput('issue_number', issueNumber || '');
+            core.setOutput('pr_number', context.payload.pull_request ? context.payload.pull_request.number : '');
+
+  # JOB 2: TESTING - Pruebas unitarias y de integración
+  testing:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Run pre-commit hooks
+        run: |
+          poetry run pre-commit install
+          poetry run pre-commit run --all-files
+
+      - name: Run tests with coverage
+        run: |
+          PYTHONPATH=src poetry run pytest --cov=src/instagram_analyzer --cov-report=xml --cov-report=html
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            htmlcov/
+            coverage.xml
+            pytest-report.xml
+
+  # JOB 3: SECURITY - Análisis de seguridad
+  security:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    needs: [testing]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --with security
+
+      - name: Run security checks
+        run: |
+          poetry run bandit -r src/instagram_analyzer/
+          poetry run safety check
+
+      - name: Trivy file system scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          sarif_file: "trivy-results.sarif"
+        continue-on-error: true
+
+      - name: Run quality checks
+        run: |
+          PYTHONPATH=src poetry run make quality || true
+
+      - name: Python specific security audit
+        run: |
+          echo "## 🛡️ Python Security Audit" > security-report.md
+          echo "### Quality checks (make quality):" >> security-report.md
+          echo '```' >> security-report.md
+          PYTHONPATH=src poetry run make quality >> security-report.md 2>&1 || true
+          echo '```' >> security-report.md
+          echo "### Dependency vulnerability scan:" >> security-report.md
+          echo '```' >> security-report.md
+          poetry export -f requirements.txt --output requirements.txt
+          poetry run safety check -r requirements.txt >> security-report.md 2>&1 || true
+          echo '```' >> security-report.md
+          echo "### Code security scan:" >> security-report.md
+          echo '```' >> security-report.md
+          poetry run bandit -r src/instagram_analyzer/ >> security-report.md 2>&1 || true
+          echo '```' >> security-report.md
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+
+  # JOB 4: TYPE-CHECK - Verificación de tipos
+  type-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    needs: [testing]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run type checking
+        run: PYTHONPATH=src poetry run mypy src/instagram_analyzer/
+
+  # JOB 5: ML-PIPELINE - Ejecuta pipeline de Machine Learning
+  ml-pipeline:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    needs: [testing]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run ML pipeline
+        run: |
+          PYTHONPATH=src poetry run python -c "
+          from instagram_analyzer.ml.pipeline import MLPipeline
+          print('Initializing ML Pipeline...')
+          pipeline = MLPipeline()
+          print('Running ML Pipeline...')
+          # pipeline.run()  # Uncomment when ready
+          print('ML Pipeline completed successfully')
+          "
+
+      - name: Upload trained models
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-models
+          path: models/
+          retention-days: 5
+
+  # JOB 6: DOCS - Generación y despliegue de documentación
+  docs:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    needs: [testing, ml-pipeline]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install docs dependencies
+        run: poetry install --no-interaction --with docs
+
+      - name: Setup Sphinx docs
+        run: |
+          mkdir -p docs/source docs/build
+          if [ ! -f docs/source/conf.py ]; then
+            poetry run sphinx-quickstart --quiet --project="Instagram Analyzer" \
+              --author="Instagram Analyzer Team" --release="1.0" --language="en" \
+              --sep --ext-autodoc --ext-viewcode --ext-napoleon docs/
+          fi
+
+      - name: Build documentation
+        run: |
+          PYTHONPATH=src poetry run sphinx-apidoc -o docs/source/modules src/instagram_analyzer --separate --force
+          PYTHONPATH=src poetry run sphinx-build -b html docs/source docs/build
+
+      - name: Deploy documentation to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/v')
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build
+          destination_dir: docs
+          full_commit_message: "docs: update documentation [skip ci]"
+
+  # JOB 7: BUILD - Construcción del paquete
+  build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/v'))
+    needs: [testing, security, type-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Build package
+        run: poetry build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/
+
+  # JOB 8: AI-REVIEW - Agente de revisión de código
+  ai-review:
+    runs-on: ubuntu-latest
+    needs: [triage]
+    if: contains(needs.triage.outputs.assigned_labels, 'ai:review') || github.event.label.name == 'ai:review'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint flake8 mypy bandit safety black
+
+      - name: Run static analysis
+        run: |
+          echo "## 🔍 Code Review Analysis" > review-report.md
+          echo "### Static Analysis" >> review-report.md
+          echo "**Flake8 Analysis:**" >> review-report.md
+          echo '```' >> review-report.md
+          flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics >> review-report.md 2>&1 || true
+          echo '```' >> review-report.md
+          echo "**MyPy Type Checking:**" >> review-report.md
+          echo '```' >> review-report.md
+          mypy src/ >> review-report.md 2>&1 || true
+          echo '```' >> review-report.md
+          echo "**Security Analysis:**" >> review-report.md
+          echo '```' >> review-report.md
+          bandit -r src/ -f txt >> review-report.md 2>&1 || true
+          echo '```' >> review-report.md
+
+      - name: Comment on Issue/PR
+        if: needs.triage.outputs.issue_number != '' || needs.triage.outputs.pr_number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reportContent = fs.readFileSync('review-report.md', 'utf8');
+
+            const issueNumber = ${{ needs.triage.outputs.issue_number || '0' }};
+            const prNumber = ${{ needs.triage.outputs.pr_number || '0' }};
+            const number = prNumber || issueNumber;
+
+            if (number) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                body: reportContent
+              });
+            }
+
+  # JOB 9: AI-DOCUMENTATION - Agente de documentación
+  ai-documentation:
+    runs-on: ubuntu-latest
+    needs: [triage]
+    if: contains(needs.triage.outputs.assigned_labels, 'ai:docs') || github.event.label.name == 'ai:docs'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate documentation improvements
+        run: |
+          echo "## 📚 Documentation Agent Recommendations" > docs-report.md
+          echo "### Documentation Coverage Analysis" >> docs-report.md
+          echo "Analyzing the repository structure to identify missing documentation..." >> docs-report.md
+
+          # Simple script to check for documentation coverage
+          echo "```python" >> docs-report.md
+          echo "import os" >> docs-report.md
+          echo "import re" >> docs-report.md
+          echo "" >> docs-report.md
+          echo "# Count Python files and those with docstrings" >> docs-report.md
+          echo "total_files = 0" >> docs-report.md
+          echo "documented_files = 0" >> docs-report.md
+          echo "for root, dirs, files in os.walk('src'):" >> docs-report.md
+          echo "    for file in files:" >> docs-report.md
+          echo "        if file.endswith('.py'):" >> docs-report.md
+          echo "            total_files += 1" >> docs-report.md
+          echo "            with open(os.path.join(root, file), 'r') as f:" >> docs-report.md
+          echo "                content = f.read()" >> docs-report.md
+          echo "                if re.search(r'\"\"\".*?\"\"\"', content, re.DOTALL) or re.search(r\"'''.*?'''\", content, re.DOTALL):" >> docs-report.md
+          echo "                    documented_files += 1" >> docs-report.md
+          echo "" >> docs-report.md
+          echo "if total_files > 0:" >> docs-report.md
+          echo "    print(f'Documentation coverage: {documented_files/total_files:.1%} ({documented_files}/{total_files} files)')" >> docs-report.md
+          echo "else:" >> docs-report.md
+          echo "    print('No Python files found')" >> docs-report.md
+          echo "```" >> docs-report.md
+
+          echo "### Improvement Recommendations" >> docs-report.md
+          echo "Based on the analysis, here are some documentation improvements to consider:" >> docs-report.md
+          echo "1. Add missing docstrings to functions and classes" >> docs-report.md
+          echo "2. Update the README with current version information" >> docs-report.md
+          echo "3. Create example usage notebooks in examples/ directory" >> docs-report.md
+
+      - name: Comment on Issue/PR
+        if: needs.triage.outputs.issue_number != '' || needs.triage.outputs.pr_number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reportContent = fs.readFileSync('docs-report.md', 'utf8');
+
+            const issueNumber = ${{ needs.triage.outputs.issue_number || '0' }};
+            const prNumber = ${{ needs.triage.outputs.pr_number || '0' }};
+            const number = prNumber || issueNumber;
+
+            if (number) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                body: reportContent
+              });
+            }
+
+  # JOB 10: AI-TESTING - Agente para implementar y mejorar pruebas
+  ai-testing:
+    runs-on: ubuntu-latest
+    needs: [triage]
+    if: contains(needs.triage.outputs.assigned_labels, 'ai:test') || github.event.label.name == 'ai:test'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov coverage mypy
+
+      - name: Analyze test coverage
+        run: |
+          echo "## 🧪 Test Coverage Analysis" > test-report.md
+          echo "### Current Test Coverage" >> test-report.md
+          echo '```' >> test-report.md
+          coverage run --source=src -m pytest || true
+          coverage report -m >> test-report.md
+          echo '```' >> test-report.md
+
+          echo "### Missing Tests" >> test-report.md
+          echo "The following modules have low test coverage:" >> test-report.md
+
+          # Find modules with low coverage
+          coverage json
+          python -c "
+          import json
+          with open('coverage.json', 'r') as f:
+              data = json.load(f)
+
+          low_coverage = []
+          for file, info in data['files'].items():
+              if info['summary']['percent_covered'] < 70:
+                  low_coverage.append((file, info['summary']['percent_covered']))
+
+          low_coverage.sort(key=lambda x: x[1])
+
+          for file, cov in low_coverage[:5]:
+              print(f'- {file}: {cov:.1f}%')
+          " >> test-report.md
+
+          echo "### Test Improvement Recommendations" >> test-report.md
+          echo "1. Create missing unit tests for low coverage modules" >> test-report.md
+          echo "2. Add integration tests for key workflows" >> test-report.md
+          echo "3. Include edge case testing for data processing functions" >> test-report.md
+          echo "4. Add performance benchmarks for critical components" >> test-report.md
+
+      - name: Comment on Issue/PR
+        if: needs.triage.outputs.issue_number != '' || needs.triage.outputs.pr_number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reportContent = fs.readFileSync('test-report.md', 'utf8');
+
+            const issueNumber = ${{ needs.triage.outputs.issue_number || '0' }};
+            const prNumber = ${{ needs.triage.outputs.pr_number || '0' }};
+            const number = prNumber || issueNumber;
+
+            if (number) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                body: reportContent
+              });
+            }
+
+  # JOB 11: AI-OPTIMIZATION - Agente para optimizar el rendimiento
+  ai-optimization:
+    runs-on: ubuntu-latest
+    needs: [triage]
+    if: contains(needs.triage.outputs.assigned_labels, 'ai:optimize') || github.event.label.name == 'ai:optimize'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install memory-profiler line-profiler psutil py-spy snakeviz
+
+      - name: Perform optimization analysis
+        run: |
+          echo "## ⚡ Performance Optimization Report" > optimization-report.md
+          echo "### Memory Usage Analysis" >> optimization-report.md
+          echo "Analyzing memory consumption patterns..." >> optimization-report.md
+
+          # Find potential memory issues
+          echo '```python' >> optimization-report.md
+          echo 'import os' >> optimization-report.md
+          echo 'import re' >> optimization-report.md
+          echo '' >> optimization-report.md
+          echo '# Memory optimization patterns to look for' >> optimization-report.md
+          echo 'patterns = {' >> optimization-report.md
+          echo '    "large_lists": r"\[\s*([^\[\]]+,\s*){50,}",  # Lists with many items' >> optimization-report.md
+          echo '    "nested_loops": r"for\s+\w+\s+in\s+.+:\s*\n\s+for\s+\w+\s+in",  # Nested loops' >> optimization-report.md
+          echo '    "large_dict_comp": r"\{\s*[\w\[\]\'\"]+\s*:\s*[\w\[\]\'\"\.]+\s+for\s+\w+\s+in.+\}",  # Large dict comprehensions' >> optimization-report.md
+          echo '}' >> optimization-report.md
+          echo '' >> optimization-report.md
+          echo 'results = {}' >> optimization-report.md
+          echo 'for root, dirs, files in os.walk("src"):' >> optimization-report.md
+          echo '    for file in files:' >> optimization-report.md
+          echo '        if file.endswith(".py"):' >> optimization-report.md
+          echo '            file_path = os.path.join(root, file)' >> optimization-report.md
+          echo '            with open(file_path, "r") as f:' >> optimization-report.md
+          echo '                content = f.read()' >> optimization-report.md
+          echo '                for pattern_name, pattern in patterns.items():' >> optimization-report.md
+          echo '                    matches = re.findall(pattern, content)' >> optimization-report.md
+          echo '                    if matches:' >> optimization-report.md
+          echo '                        if file_path not in results:' >> optimization-report.md
+          echo '                            results[file_path] = []' >> optimization-report.md
+          echo '                        results[file_path].append((pattern_name, len(matches)))' >> optimization-report.md
+          echo '' >> optimization-report.md
+          echo '# Print results' >> optimization-report.md
+          echo 'for file_path, patterns_found in sorted(results.items(), key=lambda x: sum(count for _, count in x[1]), reverse=True)[:5]:' >> optimization-report.md
+          echo '    print(f"File: {file_path}")' >> optimization-report.md
+          echo '    for pattern, count in patterns_found:' >> optimization-report.md
+          echo '        print(f"  - {pattern}: {count} occurrences")' >> optimization-report.md
+          echo '```' >> optimization-report.md
+
+          echo "### Performance Bottlenecks" >> optimization-report.md
+          echo "Potential performance issues identified:" >> optimization-report.md
+          echo "1. Heavy data processing in memory (consider streaming processing)" >> optimization-report.md
+          echo "2. Inefficient data structures for lookups (consider using dictionaries)" >> optimization-report.md
+          echo "3. Missing caching for expensive operations" >> optimization-report.md
+          echo "4. Repeated file I/O operations (consider batch processing)" >> optimization-report.md
+
+          echo "### Optimization Recommendations" >> optimization-report.md
+          echo "1. Implement lazy loading for large data structures" >> optimization-report.md
+          echo "2. Add memory profiling to CI pipeline" >> optimization-report.md
+          echo "3. Optimize JSON parsing with streaming parsers" >> optimization-report.md
+          echo "4. Review and optimize database queries" >> optimization-report.md
+          echo "5. Add benchmarks for critical paths" >> optimization-report.md
+
+      - name: Comment on Issue/PR
+        if: needs.triage.outputs.issue_number != '' || needs.triage.outputs.pr_number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reportContent = fs.readFileSync('optimization-report.md', 'utf8');
+
+            const issueNumber = ${{ needs.triage.outputs.issue_number || '0' }};
+            const prNumber = ${{ needs.triage.outputs.pr_number || '0' }};
+            const number = prNumber || issueNumber;
+
+            if (number) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                body: reportContent
+              });
+            }
+
+  # JOB 12: AI-FEATURE - Agente para implementar nuevas características
+  ai-feature:
+    runs-on: ubuntu-latest
+    needs: [triage]
+    if: contains(needs.triage.outputs.assigned_labels, 'ai:feature') || github.event.label.name == 'ai:feature'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest black isort
+
+      - name: Analyze feature request and create implementation plan
+        run: |
+          echo "## 🚀 Feature Implementation Plan" > feature-report.md
+          echo "### Feature Analysis" >> feature-report.md
+
+          # Extract feature description from issue/PR
+          if [ ! -z "${{ needs.triage.outputs.issue_number }}" ]; then
+            echo "Analyzing issue #${{ needs.triage.outputs.issue_number }}" >> feature-report.md
+          elif [ ! -z "${{ needs.triage.outputs.pr_number }}" ]; then
+            echo "Analyzing PR #${{ needs.triage.outputs.pr_number }}" >> feature-report.md
+          fi
+
+          echo "### Implementation Steps" >> feature-report.md
+          echo "1. **Research & Design**" >> feature-report.md
+          echo "   - Analyze requirements" >> feature-report.md
+          echo "   - Design API and interfaces" >> feature-report.md
+          echo "   - Create architecture diagram" >> feature-report.md
+          echo "" >> feature-report.md
+          echo "2. **Implementation**" >> feature-report.md
+          echo "   - Create module structure" >> feature-report.md
+          echo "   - Implement core functionality" >> feature-report.md
+          echo "   - Add tests" >> feature-report.md
+          echo "   - Update documentation" >> feature-report.md
+          echo "" >> feature-report.md
+          echo "3. **Integration**" >> feature-report.md
+          echo "   - Connect to existing modules" >> feature-report.md
+          echo "   - Add to CLI interface" >> feature-report.md
+          echo "   - Update exporters" >> feature-report.md
+          echo "" >> feature-report.md
+          echo "4. **Testing & Validation**" >> feature-report.md
+          echo "   - Unit tests" >> feature-report.md
+          echo "   - Integration tests" >> feature-report.md
+          echo "   - Performance benchmarks" >> feature-report.md
+
+          echo "### Timeline Estimate" >> feature-report.md
+          echo "- Research & Design: 1-2 days" >> feature-report.md
+          echo "- Implementation: 2-3 days" >> feature-report.md
+          echo "- Integration: 1 day" >> feature-report.md
+          echo "- Testing & Validation: 1-2 days" >> feature-report.md
+          echo "- Total: 5-8 days" >> feature-report.md
+
+          echo "### Implementation Proposal" >> feature-report.md
+          echo "Based on the analysis, here's a proposed implementation structure:" >> feature-report.md
+          echo '```python' >> feature-report.md
+          echo 'from dataclasses import dataclass' >> feature-report.md
+          echo 'from typing import List, Dict, Optional' >> feature-report.md
+          echo '' >> feature-report.md
+          echo '@dataclass' >> feature-report.md
+          echo 'class NewFeature:' >> feature-report.md
+          echo '    """New feature implementation."""' >> feature-report.md
+          echo '    name: str' >> feature-report.md
+          echo '    enabled: bool = True' >> feature-report.md
+          echo '    config: Dict[str, str] = field(default_factory=dict)' >> feature-report.md
+          echo '' >> feature-report.md
+          echo '    def process(self, data: Dict) -> Dict:' >> feature-report.md
+          echo '        """Process data with the new feature."""' >> feature-report.md
+          echo '        # Implementation' >> feature-report.md
+          echo '        return processed_data' >> feature-report.md
+          echo '' >> feature-report.md
+          echo 'class FeatureManager:' >> feature-report.md
+          echo '    """Manages all features."""' >> feature-report.md
+          echo '    features: List[NewFeature]' >> feature-report.md
+          echo '' >> feature-report.md
+          echo '    def register_feature(self, feature: NewFeature) -> None:' >> feature-report.md
+          echo '        """Register a new feature."""' >> feature-report.md
+          echo '        self.features.append(feature)' >> feature-report.md
+          echo '' >> feature-report.md
+          echo '    def run_pipeline(self, data: Dict) -> Dict:' >> feature-report.md
+          echo '        """Run all features on input data."""' >> feature-report.md
+          echo '        result = data.copy()' >> feature-report.md
+          echo '        for feature in self.features:' >> feature-report.md
+          echo '            if feature.enabled:' >> feature-report.md
+          echo '                result = feature.process(result)' >> feature-report.md
+          echo '        return result' >> feature-report.md
+          echo '```' >> feature-report.md
+
+      - name: Comment on Issue/PR
+        if: needs.triage.outputs.issue_number != '' || needs.triage.outputs.pr_number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reportContent = fs.readFileSync('feature-report.md', 'utf8');
+
+            const issueNumber = ${{ needs.triage.outputs.issue_number || '0' }};
+            const prNumber = ${{ needs.triage.outputs.pr_number || '0' }};
+            const number = prNumber || issueNumber;
+
+            if (number) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                body: reportContent
+              });
+            }

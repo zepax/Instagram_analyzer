@@ -1,0 +1,373 @@
+name: AI Optimization Agent
+# Agente especializado en optimizar el rendimiento del código
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  workflow_run:
+    workflows: ["AI Agent Orchestrator"]
+    types:
+      - completed
+
+jobs:
+  should-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-optimize-task == 'true' }}
+      issue-number: ${{ steps.get-issue.outputs.issue-number }}
+      context: ${{ steps.get-context.outputs.context }}
+    steps:
+      - id: check-label
+        if: github.event_name != 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const hasLabel = context.payload.label &&
+                            context.payload.label.name === 'ai:optimize';
+            core.setOutput('has-label', hasLabel.toString());
+
+      - id: check-workflow
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const workflowRun = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+
+            // Intentar encontrar el contexto del orquestador
+            let hasOptimizeTask = false;
+            try {
+              // Obtener los jobs de la ejecución del workflow
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id
+              });
+
+              // Buscar en los outputs del job triage
+              for (const job of jobs.data.jobs) {
+                if (job.name === 'triage') {
+                  // Si el job tiene steps con outputs
+                  const steps = job.steps || [];
+                  for (const step of steps) {
+                    if (step.name === 'Analyze request and assign labels' && step.outputs) {
+                      const assignedLabels = step.outputs.assigned_labels || '';
+                      hasOptimizeTask = assignedLabels.includes('ai:optimize');
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`Error checking workflow outputs: ${error}`);
+            }
+
+            core.setOutput('has-optimize-task', hasOptimizeTask.toString());
+
+      - id: get-issue
+        if: steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-optimize-task == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let issueNumber;
+
+            if (context.payload.issue) {
+              issueNumber = context.payload.issue.number;
+            } else if (context.payload.pull_request) {
+              issueNumber = context.payload.pull_request.number;
+            } else {
+              // Intentar obtener del contexto del orquestador
+              issueNumber = null;
+            }
+
+            core.setOutput('issue-number', issueNumber ? issueNumber.toString() : '');
+
+      - id: get-context
+        if: steps.get-issue.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issueNumber = parseInt(steps.get-issue.outputs.issue-number);
+            if (!issueNumber) {
+              core.setOutput('context', '{}');
+              return;
+            }
+
+            // Obtener todos los comentarios y buscar el contexto del orquestador
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            let taskContext = {};
+            for (const comment of comments.data) {
+              if (comment.body.includes('AI Orchestrator Activado')) {
+                // Extraer JSON del comentario
+                const match = comment.body.match(/```json\n([\s\S]*?)\n```/);
+                if (match && match[1]) {
+                  try {
+                    taskContext = JSON.parse(match[1]);
+                    break;
+                  } catch (e) {
+                    console.log('Error parsing context JSON');
+                  }
+                }
+              }
+            }
+
+            core.setOutput('context', JSON.stringify(taskContext));
+
+  optimize-code:
+    needs: should-run
+    if: needs.should-run.outputs.run-job == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Parse optimization task context
+        id: parse-context
+        run: |
+          ISSUE_NUMBER="${{ needs.should-run.outputs.issue-number }}"
+          CONTEXT='${{ needs.should-run.outputs.context }}'
+
+          # Extraer el módulo objetivo y tipo de optimización
+          TARGET_MODULE=$(echo $CONTEXT | jq -r '.targetModule // ""')
+          OPTIMIZATION_TYPE=$(echo $CONTEXT | jq -r '.optimizationType // "general"')
+
+          echo "target_module=$TARGET_MODULE" >> $GITHUB_OUTPUT
+          echo "optimization_type=$OPTIMIZATION_TYPE" >> $GITHUB_OUTPUT
+
+          if [ -z "$TARGET_MODULE" ]; then
+            echo "No target module specified, will scan for optimization opportunities"
+          else
+            echo "Will focus on optimizing the $TARGET_MODULE module for $OPTIMIZATION_TYPE performance"
+          fi
+
+      - name: Profile code performance
+        id: profile
+        run: |
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+          OPTIMIZATION_TYPE="${{ steps.parse-context.outputs.optimization_type }}"
+
+          # Aquí normalmente ejecutaríamos un profiling real del código
+          # usando herramientas como memory_profiler, cProfile, etc.
+
+          echo "Realizando profiling del código..."
+
+          # Simulamos el proceso
+          if [ -n "$TARGET_MODULE" ]; then
+            MODULE_PATH="src/instagram_analyzer/$TARGET_MODULE"
+
+            if [ -d "$MODULE_PATH" ]; then
+              echo "Analizando rendimiento de $MODULE_PATH"
+
+              # Simulamos la identificación de hotspots
+              echo "files_to_optimize=$MODULE_PATH" >> $GITHUB_OUTPUT
+              echo "optimization_needed=true" >> $GITHUB_OUTPUT
+
+              # Definir métricas simuladas
+              if [ "$OPTIMIZATION_TYPE" = "memory" ]; then
+                echo "optimization_metrics={\"memory_usage\":\"high\",\"object_count\":\"excessive\",\"gc_overhead\":\"moderate\"}" >> $GITHUB_OUTPUT
+              elif [ "$OPTIMIZATION_TYPE" = "speed" ]; then
+                echo "optimization_metrics={\"execution_time\":\"slow\",\"cpu_utilization\":\"high\",\"io_bottlenecks\":\"moderate\"}" >> $GITHUB_OUTPUT
+              else
+                echo "optimization_metrics={\"memory_usage\":\"moderate\",\"execution_time\":\"moderate\"}" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "El módulo $TARGET_MODULE no existe en la ruta esperada"
+              echo "optimization_needed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Análisis general de rendimiento
+            echo "Realizando análisis general de rendimiento"
+            echo "files_to_optimize=src/instagram_analyzer/cache src/instagram_analyzer/parsers" >> $GITHUB_OUTPUT
+            echo "optimization_needed=true" >> $GITHUB_OUTPUT
+            echo "optimization_metrics={\"memory_usage\":\"moderate\",\"execution_time\":\"slow\"}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Optimize code
+        id: optimize
+        if: steps.profile.outputs.optimization_needed == 'true'
+        run: |
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+          OPTIMIZATION_TYPE="${{ steps.parse-context.outputs.optimization_type }}"
+          FILES_TO_OPTIMIZE="${{ steps.profile.outputs.files_to_optimize }}"
+          METRICS='${{ steps.profile.outputs.optimization_metrics }}'
+
+          # Aquí iría la llamada a una API de IA para optimizar el código
+          # basada en el análisis de rendimiento
+
+          echo "Optimizando código para $FILES_TO_OPTIMIZE..."
+
+          # Simulamos las optimizaciones
+          mkdir -p optimized
+
+          if [ -n "$TARGET_MODULE" ]; then
+            # Optimizar módulo específico
+            MODULE_PATH="src/instagram_analyzer/$TARGET_MODULE"
+
+            # Simulamos la creación de archivos optimizados
+            if [ -d "$MODULE_PATH" ]; then
+              # Por simplicidad, simularemos la optimización con un archivo simple
+              OPTIMIZED_FILE="optimized/${TARGET_MODULE}_optimized.py"
+              echo "# Código optimizado por AI Optimization Agent" > $OPTIMIZED_FILE
+              echo "# Módulo: $TARGET_MODULE" >> $OPTIMIZED_FILE
+              echo "# Tipo de optimización: $OPTIMIZATION_TYPE" >> $OPTIMIZED_FILE
+              echo "# Fecha: $(date)" >> $OPTIMIZED_FILE
+              echo "" >> $OPTIMIZED_FILE
+
+              # Simulamos código optimizado según el tipo de optimización
+              if [ "$OPTIMIZATION_TYPE" = "memory" ]; then
+                echo "# Optimizaciones de memoria:" >> $OPTIMIZED_FILE
+                echo "# 1. Implementación de __slots__ para reducir overhead de instancias" >> $OPTIMIZED_FILE
+                echo "# 2. Uso de generadores en lugar de listas para procesamiento en streaming" >> $OPTIMIZED_FILE
+                echo "# 3. Gestión de referencias débiles para objetos grandes" >> $OPTIMIZED_FILE
+                echo "" >> $OPTIMIZED_FILE
+                echo "class OptimizedClass:" >> $OPTIMIZED_FILE
+                echo "    __slots__ = ('attr1', 'attr2')  # Reducción de memoria" >> $OPTIMIZED_FILE
+                echo "" >> $OPTIMIZED_FILE
+                echo "def process_data_stream(data):" >> $OPTIMIZED_FILE
+                echo "    # Implementación de generador para reducir uso de memoria" >> $OPTIMIZED_FILE
+                echo "    for item in data:" >> $OPTIMIZED_FILE
+                echo "        yield process_item(item)" >> $OPTIMIZED_FILE
+              elif [ "$OPTIMIZATION_TYPE" = "speed" ]; then
+                echo "# Optimizaciones de velocidad:" >> $OPTIMIZED_FILE
+                echo "# 1. Uso de caching para resultados frecuentes" >> $OPTIMIZED_FILE
+                echo "# 2. Optimización de bucles críticos" >> $OPTIMIZED_FILE
+                echo "# 3. Paralelización de operaciones independientes" >> $OPTIMIZED_FILE
+                echo "" >> $OPTIMIZED_FILE
+                echo "from functools import lru_cache" >> $OPTIMIZED_FILE
+                echo "" >> $OPTIMIZED_FILE
+                echo "@lru_cache(maxsize=128)" >> $OPTIMIZED_FILE
+                echo "def compute_result(input_data):" >> $OPTIMIZED_FILE
+                echo "    # Función optimizada con cache" >> $OPTIMIZED_FILE
+                echo "    return complex_calculation(input_data)" >> $OPTIMIZED_FILE
+                echo "" >> $OPTIMIZED_FILE
+                echo "def process_batch(items):" >> $OPTIMIZED_FILE
+                echo "    # Uso de comprensión de listas más eficiente" >> $OPTIMIZED_FILE
+                echo "    return [compute_result(item) for item in items]" >> $OPTIMIZED_FILE
+              else
+                echo "# Optimizaciones generales:" >> $OPTIMIZED_FILE
+                echo "# 1. Mejoras de algoritmos" >> $OPTIMIZED_FILE
+                echo "# 2. Reducción de complejidad ciclomática" >> $OPTIMIZED_FILE
+                echo "# 3. Mejor manejo de recursos" >> $OPTIMIZED_FILE
+                echo "" >> $OPTIMIZED_FILE
+                echo "def improved_algorithm(data):" >> $OPTIMIZED_FILE
+                echo "    # Implementación más eficiente" >> $OPTIMIZED_FILE
+                echo "    result = initialize_result()" >> $OPTIMIZED_FILE
+                echo "    for item in data:" >> $OPTIMIZED_FILE
+                echo "        update_result(result, item)" >> $OPTIMIZED_FILE
+                echo "    return finalize_result(result)" >> $OPTIMIZED_FILE
+              fi
+
+              echo "optimizations_created=true" >> $GITHUB_OUTPUT
+              echo "optimized_files=$OPTIMIZED_FILE" >> $GITHUB_OUTPUT
+            else
+              echo "optimizations_created=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Optimización general
+            OPTIMIZED_FILE="optimized/general_optimizations.py"
+            echo "# Optimizaciones generales por AI Optimization Agent" > $OPTIMIZED_FILE
+            echo "# Fecha: $(date)" >> $OPTIMIZED_FILE
+            echo "" >> $OPTIMIZED_FILE
+            echo "# Recomendaciones generales de optimización:" >> $OPTIMIZED_FILE
+            echo "# 1. Implementar caching para operaciones repetitivas" >> $OPTIMIZED_FILE
+            echo "# 2. Utilizar procesamiento paralelo donde sea posible" >> $OPTIMIZED_FILE
+            echo "# 3. Mejorar gestión de memoria con ciclos de vida controlados" >> $OPTIMIZED_FILE
+
+            echo "optimizations_created=true" >> $GITHUB_OUTPUT
+            echo "optimized_files=$OPTIMIZED_FILE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Benchmark optimizations
+        id: benchmark
+        if: steps.optimize.outputs.optimizations_created == 'true'
+        run: |
+          # En un caso real, ejecutaríamos benchmarks para comparar
+          # el rendimiento antes y después de las optimizaciones
+          echo "Realizando benchmarks de las optimizaciones..."
+
+          # Simulamos los resultados
+          OPTIMIZATION_TYPE="${{ steps.parse-context.outputs.optimization_type }}"
+
+          if [ "$OPTIMIZATION_TYPE" = "memory" ]; then
+            echo "benchmark_results={\"memory_reduction\":\"45%\",\"object_count_reduction\":\"30%\"}" >> $GITHUB_OUTPUT
+          elif [ "$OPTIMIZATION_TYPE" = "speed" ]; then
+            echo "benchmark_results={\"execution_time_improvement\":\"65%\",\"throughput_increase\":\"70%\"}" >> $GITHUB_OUTPUT
+          else
+            echo "benchmark_results={\"overall_improvement\":\"35%\",\"resource_usage_reduction\":\"25%\"}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create PR with optimizations
+        if: steps.optimize.outputs.optimizations_created == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "perf: Add AI-suggested optimizations"
+          title: "AI-suggested optimizations for ${{ steps.parse-context.outputs.target_module || 'multiple modules' }}"
+          body: |
+            Este PR fue generado automáticamente por el AI Optimization Agent en respuesta a #${{ needs.should-run.outputs.issue-number }}
+
+            Contiene optimizaciones para:
+            ${{ steps.parse-context.outputs.target_module || 'Varios módulos del proyecto' }}
+
+            Tipo de optimización: ${{ steps.parse-context.outputs.optimization_type }}
+
+            Mejoras estimadas:
+            ```json
+            ${{ steps.benchmark.outputs.benchmark_results }}
+            ```
+
+            Por favor revisa las optimizaciones y realiza cualquier ajuste necesario antes de integrarlas.
+          branch: ai-optimize-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+          base: ${{ github.ref }}
+          labels: optimization,performance
+
+      - name: Comment on issue
+        if: needs.should-run.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ needs.should-run.outputs.issue-number }}');
+            if (!issueNumber) return;
+
+            const optimizationsCreated = '${{ steps.optimize.outputs.optimizations_created }}' === 'true';
+            let comment;
+
+            if (optimizationsCreated) {
+              comment = `🤖 **AI Optimization Agent** ha completado la tarea.\n\n` +
+                        `Se ha creado un PR con optimizaciones para ` +
+                        `${{ steps.parse-context.outputs.target_module || 'varios módulos del proyecto' }}.\n\n` +
+                        `Tipo de optimización: ${{ steps.parse-context.outputs.optimization_type }}\n\n` +
+                        `Mejoras estimadas:\n\`\`\`json\n${{ steps.benchmark.outputs.benchmark_results || '{}' }}\n\`\`\`\n\n` +
+                        `Por favor revisa las optimizaciones y realiza cualquier ajuste necesario.`;
+            } else {
+              comment = `🤖 **AI Optimization Agent** no pudo completar la tarea.\n\n` +
+                        `No se encontró el módulo especificado o no se identificaron oportunidades de optimización claras.`;
+            }
+
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

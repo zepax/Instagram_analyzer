@@ -1,0 +1,175 @@
+name: AI Agent Orchestrator
+# Orquestador principal para el sistema Multi-Agent
+# Analiza issues y PRs para asignar las etiquetas correspondientes que activarán los agentes especializados
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+  pull_request:
+    types: [opened, edited, labeled]
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: "Tipo de tarea a realizar (docs, test, optimize, feature, review)"
+        required: true
+        default: "review"
+      target_module:
+        description: "Módulo objetivo (cache, parser, analyzer, exporter, etc)"
+        required: false
+        default: ""
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Analyze request and assign labels
+        id: analyze
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = context.payload.issue ? context.payload.issue.body :
+                        (context.payload.pull_request ? context.payload.pull_request.body : '');
+
+            const issueNumber = context.payload.issue ? context.payload.issue.number :
+                              (context.payload.pull_request ? context.payload.pull_request.number : null);
+
+            if (!issueNumber && !context.payload.inputs) {
+              console.log('No issue/PR detected and not manually triggered');
+              return;
+            }
+
+            let labels = [];
+            let taskContext = {};
+
+            // Si es un workflow_dispatch manual, usar los inputs
+            if (context.payload.inputs) {
+              const taskType = context.payload.inputs.task_type;
+              if (taskType) {
+                labels.push(`ai:${taskType}`);
+                taskContext.targetModule = context.payload.inputs.target_module || '';
+                taskContext.manuallyTriggered = true;
+              }
+            }
+            // Si es un issue o PR, analizar el contenido
+            else if (body) {
+              // Análisis para documentación
+              if (body.toLowerCase().includes('documentación') ||
+                  body.toLowerCase().includes('documentation') ||
+                  body.toLowerCase().includes('docs') ||
+                  body.toLowerCase().includes('readme')) {
+                labels.push('ai:docs');
+                taskContext.documentationType = 'general';
+              }
+
+              // Análisis para testing
+              if (body.toLowerCase().includes('test') ||
+                  body.toLowerCase().includes('prueba') ||
+                  body.toLowerCase().includes('unit test') ||
+                  body.toLowerCase().includes('integration test')) {
+                labels.push('ai:test');
+                taskContext.testType = body.toLowerCase().includes('unit') ? 'unit' :
+                                      (body.toLowerCase().includes('integration') ? 'integration' : 'general');
+              }
+
+              // Análisis para optimización
+              if (body.toLowerCase().includes('optimiza') ||
+                  body.toLowerCase().includes('optimize') ||
+                  body.toLowerCase().includes('performance') ||
+                  body.toLowerCase().includes('lento') ||
+                  body.toLowerCase().includes('slow')) {
+                labels.push('ai:optimize');
+                taskContext.optimizationType = body.toLowerCase().includes('memory') ? 'memory' :
+                                             (body.toLowerCase().includes('speed') ? 'speed' : 'general');
+              }
+
+              // Análisis para nuevas características
+              if (body.toLowerCase().includes('feature') ||
+                  body.toLowerCase().includes('característica') ||
+                  body.toLowerCase().includes('nueva función') ||
+                  body.toLowerCase().includes('new feature')) {
+                labels.push('ai:feature');
+                taskContext.featurePriority = body.toLowerCase().includes('urgent') ? 'high' : 'normal';
+              }
+
+              // Análisis para revisión de código
+              if (body.toLowerCase().includes('review') ||
+                  body.toLowerCase().includes('revisión') ||
+                  body.toLowerCase().includes('audit') ||
+                  body.toLowerCase().includes('auditoría')) {
+                labels.push('ai:review');
+                taskContext.reviewDepth = body.toLowerCase().includes('deep') ? 'deep' : 'normal';
+              }
+
+              // Detectar módulos mencionados
+              const modules = ['cache', 'parser', 'analyzer', 'exporter', 'ml', 'network', 'config', 'utils'];
+              modules.forEach(module => {
+                if (body.toLowerCase().includes(module)) {
+                  taskContext.targetModule = module;
+                }
+              });
+            }
+
+            // Si encontramos etiquetas, aplicarlas
+            if (labels.length > 0 && issueNumber) {
+              await github.rest.issues.addLabels({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: labels
+              });
+
+              // Guardar contexto para otros workflows
+              const comment = `🤖 **AI Orchestrator Activado**\n\n` +
+                            `Etiquetas asignadas: ${labels.join(', ')}\n\n` +
+                            `Contexto detectado: \`\`\`json\n${JSON.stringify(taskContext, null, 2)}\`\`\`\n\n` +
+                            `Los agentes correspondientes comenzarán a trabajar en esta solicitud.`;
+
+              await github.rest.issues.createComment({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+
+              core.setOutput('task_context', JSON.stringify(taskContext));
+              core.setOutput('assigned_labels', labels.join(','));
+            } else if (context.payload.inputs) {
+              // Para ejecuciones manuales, simplemente exportar el contexto
+              core.setOutput('task_context', JSON.stringify(taskContext));
+              core.setOutput('assigned_labels', labels.join(','));
+              console.log(`Manual execution with context: ${JSON.stringify(taskContext)}`);
+            }
+
+      - name: Log assigned tasks
+        run: |
+          echo "Assigned labels: ${{ steps.analyze.outputs.assigned_labels || 'none' }}"
+          echo "Task context: ${{ steps.analyze.outputs.task_context || '{}' }}"
+
+  notify-agents:
+    needs: triage
+    if: needs.triage.outputs.assigned_labels != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify documentation agent
+        if: contains(needs.triage.outputs.assigned_labels, 'ai:docs')
+        run: echo "Documentation agent would be triggered here"
+
+      - name: Notify testing agent
+        if: contains(needs.triage.outputs.assigned_labels, 'ai:test')
+        run: echo "Testing agent would be triggered here"
+
+      - name: Notify optimization agent
+        if: contains(needs.triage.outputs.assigned_labels, 'ai:optimize')
+        run: echo "Optimization agent would be triggered here"
+
+      - name: Notify feature agent
+        if: contains(needs.triage.outputs.assigned_labels, 'ai:feature')
+        run: echo "Feature agent would be triggered here"
+
+      - name: Notify review agent
+        if: contains(needs.triage.outputs.assigned_labels, 'ai:review')
+        run: echo "Review agent would be triggered here"

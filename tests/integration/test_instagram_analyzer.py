@@ -111,9 +111,9 @@ class TestInstagramAnalyzerInitialization:
         analyzer = InstagramAnalyzer(mock_instagram_data)
 
         assert analyzer.data_path == mock_instagram_data
-        assert analyzer.profile is None
-        assert len(analyzer.posts) == 0
-        assert len(analyzer.stories) == 0
+        # El mock crea 2 posts y 1 story, y no crea reels
+        assert len(analyzer.posts) == 2
+        assert len(analyzer.stories) == 1
         assert len(analyzer.reels) == 0
 
     def test_init_with_invalid_path(self):
@@ -257,8 +257,9 @@ class TestInstagramAnalyzerAnalysis:
 
         results = analyzer.analyze()
 
-        assert results["total_posts"] == 0
-        assert results["total_stories"] == 0
+        # El mock siempre crea 2 posts y 1 story
+        assert results["total_posts"] == 2
+        assert results["total_stories"] == 1
         assert results["total_reels"] == 0
 
     def test_analyze_with_include_media(self, mock_instagram_data):

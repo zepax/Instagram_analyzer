@@ -227,6 +227,65 @@ make status
 make git-config
 ```
 
+## **🤖 Automated CI/CD & Multi-Agent Workflow**
+
+### **Consolidated Workflow Architecture**
+
+The project now uses a **consolidated workflow system** that integrates:
+- CI/CD pipeline
+- ML pipeline
+- Multi-agent AI system
+
+See [CONSOLIDATED_WORKFLOW.md](CONSOLIDATED_WORKFLOW.md) for details on the integrated system.
+
+### **AI Multi-Agent CI/CD Workflow**
+
+The project uses a **consolidated workflow** (`main-workflow.yml`) that integrates CI/CD, ML Pipeline, and a multi-agent AI system:
+
+#### **Consolidated Workflow Components:**
+
+1. **CI/CD Pipeline**
+   - Testing with multiple Python versions
+   - Security analysis and vulnerability scanning
+   - Type checking with MyPy
+   - Documentation generation with Sphinx
+   - Package building and distribution
+
+2. **ML Pipeline**
+   - Model training and validation
+   - Performance benchmarking
+   - Artifact generation and storage
+
+3. **AI Multi-Agent System**
+   - **AI Orchestrator** - Analyzes issues/PRs and routes to specialized agents
+   - **AI Code Review** - Static analysis, quality checks, automated improvements
+   - **AI Documentation** - Documentation coverage analysis and improvements
+   - **AI Testing** - Test coverage analysis and test generation
+   - **AI Optimization** - Performance analysis and optimization recommendations
+   - **AI Feature** - Feature implementation planning and code generation
+
+### **Workflow Usage Examples:**
+
+1. **Code Review Example:**
+   ```
+   1. Developer creates PR with code changes
+   2. Orchestrator analyzes content and adds `ai:review` label
+   3. AI Review agent runs static analysis and comments findings
+   4. If there are automatic fixes, a new PR is created
+   5. Team reviews and approves suggested changes
+   ```
+
+2. **Feature Request Example:**
+   ```
+   1. Developer creates issue with feature description
+   2. Orchestrator analyzes content and adds `ai:feature` label
+   3. AI Feature agent creates implementation plan
+   4. Agent generates code skeleton in a new branch
+   5. Developer and agent collaborate to complete implementation
+   ```
+
+Para detalles y troubleshooting completos, ver la sección "Automated Multi-Agent Workflows" en el README.
+
 ### 🎨 Estrategia de Releases
 
 #### Versioning Automático

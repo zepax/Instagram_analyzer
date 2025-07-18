@@ -32,6 +32,28 @@ Una herramienta completa de análisis para exportaciones de datos de Instagram. 
 - **Interfaz CLI**: Herramientas de línea de comandos para procesamiento por lotes y automatización
 - **Integración API**: Acceso programático para flujos de trabajo de análisis personalizados
 
+## 🤖 Flujos de Trabajo Multi-Agente Automatizados
+
+Este proyecto utiliza un sistema multi-agente potenciado por GitHub Actions y asistentes de IA para automatizar la revisión de código, documentación, pruebas, optimización e implementación de características.
+
+### Agentes Disponibles
+
+- **Orquestador IA**: Asigna tareas a agentes especializados basándose en el contenido del issue/PR o etiquetas.
+- **Agente de Revisión de Código IA**: Realiza análisis estático, comenta en issues/PRs y puede proponer correcciones automáticas.
+- **Agente de Documentación IA**: Genera y actualiza documentación técnica.
+- **Agente de Pruebas IA**: Sugiere y crea nuevas pruebas para código sin cobertura.
+- **Agente de Optimización IA**: Recomienda y aplica mejoras de rendimiento.
+- **Agente de Características IA**: Implementa nuevas características según se solicite.
+
+### Cómo Usar
+
+1. **Crea un Issue o Pull Request** describiendo tu tarea.
+2. **Añade una etiqueta** (ej. `ai:review`, `ai:docs`, `ai:test`, `ai:optimize`, `ai:feature`), o permite que el Orquestador la asigne automáticamente.
+3. **Espera a que el agente procese** y comente o cree un PR con sugerencias/correcciones.
+4. **Revisa y fusiona** los cambios propuestos según sea necesario.
+
+Ve [docs/WORKFLOW.md](docs/WORKFLOW.md) para detalles completos.
+
 ## 🚀 Instalación
 
 ### Requisitos Previos
@@ -227,10 +249,10 @@ validation = analyzer.validate_data()
 # Verificar resultados de validación
 if validation["data_loaded"]["valid"]:
     print(f"Cargado: {validation['data_loaded']['details']}")
-    
+
 if validation["profile_data"]["valid"]:
     print("Información de perfil encontrada")
-    
+
 if validation["content_found"]["valid"]:
     print(f"Contenido total: {validation['content_found']['count']}")
 ```

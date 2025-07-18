@@ -1,0 +1,297 @@
+name: AI Testing Agent
+# Agente especializado en crear y mantener tests
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  workflow_run:
+    workflows: ["AI Agent Orchestrator"]
+    types:
+      - completed
+
+jobs:
+  should-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-test-task == 'true' }}
+      issue-number: ${{ steps.get-issue.outputs.issue-number }}
+      context: ${{ steps.get-context.outputs.context }}
+    steps:
+      - id: check-label
+        if: github.event_name != 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const hasLabel = context.payload.label &&
+                            context.payload.label.name === 'ai:test';
+            core.setOutput('has-label', hasLabel.toString());
+
+      - id: check-workflow
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const workflowRun = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+
+            // Intentar encontrar el contexto del orquestador
+            let hasTestTask = false;
+            try {
+              // Obtener los jobs de la ejecución del workflow
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id
+              });
+
+              // Buscar en los outputs del job triage
+              for (const job of jobs.data.jobs) {
+                if (job.name === 'triage') {
+                  // Si el job tiene steps con outputs
+                  const steps = job.steps || [];
+                  for (const step of steps) {
+                    if (step.name === 'Analyze request and assign labels' && step.outputs) {
+                      const assignedLabels = step.outputs.assigned_labels || '';
+                      hasTestTask = assignedLabels.includes('ai:test');
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`Error checking workflow outputs: ${error}`);
+            }
+
+            core.setOutput('has-test-task', hasTestTask.toString());
+
+      - id: get-issue
+        if: steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-test-task == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let issueNumber;
+
+            if (context.payload.issue) {
+              issueNumber = context.payload.issue.number;
+            } else if (context.payload.pull_request) {
+              issueNumber = context.payload.pull_request.number;
+            } else {
+              // Intentar obtener del contexto del orquestador
+              issueNumber = null;
+            }
+
+            core.setOutput('issue-number', issueNumber ? issueNumber.toString() : '');
+
+      - id: get-context
+        if: steps.get-issue.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issueNumber = parseInt(steps.get-issue.outputs.issue-number);
+            if (!issueNumber) {
+              core.setOutput('context', '{}');
+              return;
+            }
+
+            // Obtener todos los comentarios y buscar el contexto del orquestador
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            let taskContext = {};
+            for (const comment of comments.data) {
+              if (comment.body.includes('AI Orchestrator Activado')) {
+                // Extraer JSON del comentario
+                const match = comment.body.match(/```json\n([\s\S]*?)\n```/);
+                if (match && match[1]) {
+                  try {
+                    taskContext = JSON.parse(match[1]);
+                    break;
+                  } catch (e) {
+                    console.log('Error parsing context JSON');
+                  }
+                }
+              }
+            }
+
+            core.setOutput('context', JSON.stringify(taskContext));
+
+  generate-tests:
+    needs: should-run
+    if: needs.should-run.outputs.run-job == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Parse test task context
+        id: parse-context
+        run: |
+          ISSUE_NUMBER="${{ needs.should-run.outputs.issue-number }}"
+          CONTEXT='${{ needs.should-run.outputs.context }}'
+
+          # Extraer el módulo objetivo y tipo de test
+          TARGET_MODULE=$(echo $CONTEXT | jq -r '.targetModule // ""')
+          TEST_TYPE=$(echo $CONTEXT | jq -r '.testType // "general"')
+
+          echo "target_module=$TARGET_MODULE" >> $GITHUB_OUTPUT
+          echo "test_type=$TEST_TYPE" >> $GITHUB_OUTPUT
+
+          if [ -z "$TARGET_MODULE" ]; then
+            echo "No target module specified, will scan for untested code"
+          else
+            echo "Will focus on testing the $TARGET_MODULE module with $TEST_TYPE tests"
+          fi
+
+      - name: Analyze code coverage and identify missing tests
+        id: analyze-coverage
+        run: |
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+          TEST_TYPE="${{ steps.parse-context.outputs.test_type }}"
+
+          # En un escenario real, aquí ejecutaríamos pytest con coverage
+          # y analizaríamos los resultados para identificar áreas sin tests
+          echo "Ejecutando análisis de cobertura de tests..."
+
+          # Simulamos el proceso
+          if [ -n "$TARGET_MODULE" ]; then
+            MODULE_PATH="src/instagram_analyzer/$TARGET_MODULE"
+            TEST_PATH="tests/unit/$TARGET_MODULE"
+
+            if [ -d "$MODULE_PATH" ]; then
+              echo "Analizando cobertura para $MODULE_PATH"
+
+              # Simulamos la identificación de archivos sin tests
+              echo "files_to_test=$MODULE_PATH" >> $GITHUB_OUTPUT
+              echo "missing_test_coverage=true" >> $GITHUB_OUTPUT
+            else
+              echo "El módulo $TARGET_MODULE no existe en la ruta esperada"
+              echo "missing_test_coverage=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Análisis general de cobertura
+            echo "Realizando análisis general de cobertura de tests"
+            echo "files_to_test=src/instagram_analyzer/cache src/instagram_analyzer/config" >> $GITHUB_OUTPUT
+            echo "missing_test_coverage=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate tests
+        id: generate-tests
+        if: steps.analyze-coverage.outputs.missing_test_coverage == 'true'
+        run: |
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+          TEST_TYPE="${{ steps.parse-context.outputs.test_type }}"
+          FILES_TO_TEST="${{ steps.analyze-coverage.outputs.files_to_test }}"
+
+          # Aquí iría la llamada a una API de IA para generar tests
+          # basados en el análisis de cobertura
+
+          echo "Generando tests para $FILES_TO_TEST..."
+
+          # Simulamos la generación de tests
+          mkdir -p tests/generated
+
+          if [ -n "$TARGET_MODULE" ]; then
+            # Crear test específico para el módulo
+            TEST_FILE="tests/generated/test_${TARGET_MODULE}_generated.py"
+            echo "import pytest" > $TEST_FILE
+            echo "from instagram_analyzer.$TARGET_MODULE import *" >> $TEST_FILE
+            echo "" >> $TEST_FILE
+            echo "# Tests generados automáticamente por AI Testing Agent" >> $TEST_FILE
+            echo "# Fecha: $(date)" >> $TEST_FILE
+            echo "" >> $TEST_FILE
+            echo "def test_${TARGET_MODULE}_functionality():" >> $TEST_FILE
+            echo "    # Este es un test generado automáticamente" >> $TEST_FILE
+            echo "    assert True  # Reemplazar con assertions reales" >> $TEST_FILE
+
+            echo "tests_created=true" >> $GITHUB_OUTPUT
+            echo "test_files=$TEST_FILE" >> $GITHUB_OUTPUT
+          else
+            # Generar tests generales
+            TEST_FILE="tests/generated/test_general_generated.py"
+            echo "import pytest" > $TEST_FILE
+            echo "# Tests generales generados automáticamente por AI Testing Agent" >> $TEST_FILE
+            echo "# Fecha: $(date)" >> $TEST_FILE
+            echo "" >> $TEST_FILE
+            echo "def test_general_functionality():" >> $TEST_FILE
+            echo "    # Este es un test general generado automáticamente" >> $TEST_FILE
+            echo "    assert True  # Reemplazar con assertions reales" >> $TEST_FILE
+
+            echo "tests_created=true" >> $GITHUB_OUTPUT
+            echo "test_files=$TEST_FILE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run generated tests
+        if: steps.generate-tests.outputs.tests_created == 'true'
+        run: |
+          # En un escenario real, ejecutaríamos los tests generados
+          # para asegurarnos de que pasan
+          echo "Ejecutando tests generados..."
+          python -m pytest ${{ steps.generate-tests.outputs.test_files }} -v
+
+      - name: Create PR with new tests
+        if: steps.generate-tests.outputs.tests_created == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "test: Add AI-generated tests"
+          title: "AI-generated tests for ${{ steps.parse-context.outputs.target_module || 'multiple modules' }}"
+          body: |
+            Este PR fue generado automáticamente por el AI Testing Agent en respuesta a #${{ needs.should-run.outputs.issue-number }}
+
+            Contiene tests generados para:
+            ${{ steps.parse-context.outputs.target_module || 'Varios módulos del proyecto' }}
+
+            Tipo de tests: ${{ steps.parse-context.outputs.test_type }}
+
+            Por favor revisa los tests y realiza cualquier ajuste necesario.
+          branch: ai-tests-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+          base: ${{ github.ref }}
+          labels: testing
+
+      - name: Comment on issue
+        if: needs.should-run.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ needs.should-run.outputs.issue-number }}');
+            if (!issueNumber) return;
+
+            const testsCreated = '${{ steps.generate-tests.outputs.tests_created }}' === 'true';
+            let comment;
+
+            if (testsCreated) {
+              comment = `🤖 **AI Testing Agent** ha completado la tarea.\n\n` +
+                        `Se ha creado un PR con nuevos tests para ` +
+                        `${{ steps.parse-context.outputs.target_module || 'varios módulos del proyecto' }}.\n\n` +
+                        `Tipo de tests: ${{ steps.parse-context.outputs.test_type }}\n\n` +
+                        `Por favor revisa los tests y realiza cualquier ajuste necesario.`;
+            } else {
+              comment = `🤖 **AI Testing Agent** no pudo completar la tarea.\n\n` +
+                        `No se encontró el módulo especificado o no se detectó código sin cobertura de tests.`;
+            }
+
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

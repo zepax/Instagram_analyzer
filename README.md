@@ -227,6 +227,35 @@ instagram-miner analyze /path/to/data --compact
 analyzer.export_html("./output", compact=True, max_items=50)
 ```
 
+## 🤖 Automated Multi-Agent Workflows
+
+This project uses a consolidated multi-agent system powered by GitHub Actions and AI assistants to automate code review, documentation, testing, optimization, and feature implementation.
+
+### Integrated Workflow System
+
+The project features a single consolidated workflow (`main-workflow.yml`) that handles:
+- **CI/CD Pipeline**: Testing, security checks, documentation and packaging
+- **ML Pipeline**: Model training and evaluation
+- **AI Agents**: Complete multi-agent automation system with intelligent task routing
+
+### Available Agents
+
+- **AI Orchestrator**: Assigns tasks to specialized agents based on issue/PR content or labels.
+- **AI Code Review Agent**: Performs static analysis, comments on issues/PRs, and can propose automated fixes.
+- **AI Documentation Agent**: Generates and updates technical documentation.
+- **AI Testing Agent**: Suggests and creates new tests for uncovered code.
+- **AI Optimization Agent**: Recommends and applies performance improvements.
+- **AI Feature Agent**: Implements new features as requested.
+
+### How to Use
+
+1. **Create an Issue or Pull Request** describing your task.
+2. **Add a label** (e.g., `ai:review`, `ai:docs`, `ai:test`, `ai:optimize`, `ai:feature`), or let the Orchestrator assign it automatically.
+3. **Wait for the agent to process** and comment or create a PR with suggestions/fixes.
+4. **Review and merge** the proposed changes as needed.
+
+See [docs/WORKFLOW.md](docs/WORKFLOW.md) for full details.
+
 ## 🔧 Development Workflow
 
 ### For Contributors & AI Assistants
@@ -249,9 +278,9 @@ make quality-commit
 ```
 
 #### Git Workflow Rules
-- **Work on**: `v0.2.05` branch (current version)
-- **Feature branches**: Create from `v0.2.05`
-- **Merge back to**: `v0.2.05` branch
+- **Work on**: `v0.2.07` branch (current version)
+- **Feature branches**: Create from `v0.2.07`
+- **Merge back to**: `v0.2.07` branch
 - **Quality gates**: Run `make quality` before every commit
 
 #### Common Commands

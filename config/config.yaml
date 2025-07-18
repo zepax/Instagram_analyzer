@@ -1,0 +1,23 @@
+# Instagram Analyzer - Configuración principal
+
+app:
+  name: Instagram Analyzer
+  version: 0.2.06
+  debug: false
+
+cache:
+  enabled: true
+  memory_limit_mb: 256
+  disk_cache_path: cache/disk_cache.sqlite
+  default_ttl: 3600
+
+export:
+  html_output_dir: output/html/
+  pdf_output_dir: output/pdf/
+  max_items: 1000
+
+ml:
+  enabled: true
+  model_dir: models/
+  default_model: sentiment_analyzer.pkl
+# Puedes añadir más secciones según necesidades futuras

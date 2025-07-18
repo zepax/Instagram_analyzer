@@ -1,0 +1,252 @@
+name: AI Documentation Agent
+# Agente especializado en mejorar la documentación del proyecto
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  workflow_run:
+    workflows: ["AI Agent Orchestrator"]
+    types:
+      - completed
+
+jobs:
+  should-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-docs-task == 'true' }}
+      issue-number: ${{ steps.get-issue.outputs.issue-number }}
+      context: ${{ steps.get-context.outputs.context }}
+    steps:
+      - id: check-label
+        if: github.event_name != 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const hasLabel = context.payload.label &&
+                            context.payload.label.name === 'ai:docs';
+            core.setOutput('has-label', hasLabel.toString());
+
+      - id: check-workflow
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const workflowRun = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+
+            // Intentar encontrar el contexto del orquestador
+            let hasDocsTask = false;
+            try {
+              // Obtener los jobs de la ejecución del workflow
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id
+              });
+
+              // Buscar en los outputs del job triage
+              for (const job of jobs.data.jobs) {
+                if (job.name === 'triage') {
+                  // Si el job tiene steps con outputs
+                  const steps = job.steps || [];
+                  for (const step of steps) {
+                    if (step.name === 'Analyze request and assign labels' && step.outputs) {
+                      const assignedLabels = step.outputs.assigned_labels || '';
+                      hasDocsTask = assignedLabels.includes('ai:docs');
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`Error checking workflow outputs: ${error}`);
+            }
+
+            core.setOutput('has-docs-task', hasDocsTask.toString());
+
+      - id: get-issue
+        if: steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-docs-task == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let issueNumber;
+
+            if (context.payload.issue) {
+              issueNumber = context.payload.issue.number;
+            } else if (context.payload.pull_request) {
+              issueNumber = context.payload.pull_request.number;
+            } else {
+              // Intentar obtener del contexto del orquestador
+              // (esto es más complejo y dependerá de cómo pase el orquestador la información)
+              issueNumber = null;
+            }
+
+            core.setOutput('issue-number', issueNumber ? issueNumber.toString() : '');
+
+      - id: get-context
+        if: steps.get-issue.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issueNumber = parseInt(steps.get-issue.outputs.issue-number);
+            if (!issueNumber) {
+              core.setOutput('context', '{}');
+              return;
+            }
+
+            // Obtener todos los comentarios y buscar el contexto del orquestador
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            let taskContext = {};
+            for (const comment of comments.data) {
+              if (comment.body.includes('AI Orchestrator Activado')) {
+                // Extraer JSON del comentario
+                const match = comment.body.match(/```json\n([\s\S]*?)\n```/);
+                if (match && match[1]) {
+                  try {
+                    taskContext = JSON.parse(match[1]);
+                    break;
+                  } catch (e) {
+                    console.log('Error parsing context JSON');
+                  }
+                }
+              }
+            }
+
+            core.setOutput('context', JSON.stringify(taskContext));
+
+  improve-docs:
+    needs: should-run
+    if: needs.should-run.outputs.run-job == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Parse documentation task context
+        id: parse-context
+        run: |
+          ISSUE_NUMBER="${{ needs.should-run.outputs.issue-number }}"
+          CONTEXT='${{ needs.should-run.outputs.context }}'
+
+          # Extraer el módulo objetivo si existe
+          TARGET_MODULE=$(echo $CONTEXT | jq -r '.targetModule // ""')
+          DOC_TYPE=$(echo $CONTEXT | jq -r '.documentationType // "general"')
+
+          echo "target_module=$TARGET_MODULE" >> $GITHUB_OUTPUT
+          echo "doc_type=$DOC_TYPE" >> $GITHUB_OUTPUT
+
+          if [ -z "$TARGET_MODULE" ]; then
+            echo "No target module specified, will scan project structure"
+          else
+            echo "Will focus on documenting the $TARGET_MODULE module"
+          fi
+
+      - name: Analyze code and generate documentation
+        id: generate-docs
+        run: |
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+          DOC_TYPE="${{ steps.parse-context.outputs.doc_type }}"
+
+          # Aquí iría la llamada a una API de IA para generar documentación
+          # Por ahora, simulamos el proceso
+
+          echo "Analizando código para documentación..."
+
+          if [ -n "$TARGET_MODULE" ]; then
+            # Documentar un módulo específico
+            MODULE_PATH="src/instagram_analyzer/$TARGET_MODULE"
+
+            if [ -d "$MODULE_PATH" ]; then
+              echo "Generando documentación para $MODULE_PATH"
+              # Aquí se llamaría a la API de IA con el código del módulo
+
+              # Simulamos la creación de un archivo de documentación mejorada
+              mkdir -p docs/generated
+              echo "# Documentación generada para $TARGET_MODULE" > docs/generated/${TARGET_MODULE}_docs.md
+              echo "Esta documentación fue generada automáticamente por el AI Documentation Agent" >> docs/generated/${TARGET_MODULE}_docs.md
+              echo "Fecha: $(date)" >> docs/generated/${TARGET_MODULE}_docs.md
+
+              echo "docs_created=true" >> $GITHUB_OUTPUT
+              echo "docs_path=docs/generated/${TARGET_MODULE}_docs.md" >> $GITHUB_OUTPUT
+            else
+              echo "El módulo $TARGET_MODULE no existe en la ruta esperada"
+              echo "docs_created=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Documentación general del proyecto
+            echo "Generando documentación general del proyecto"
+            mkdir -p docs/generated
+            echo "# Documentación General del Proyecto" > docs/generated/general_docs.md
+            echo "Esta documentación fue generada automáticamente por el AI Documentation Agent" >> docs/generated/general_docs.md
+            echo "Fecha: $(date)" >> docs/generated/general_docs.md
+
+            echo "docs_created=true" >> $GITHUB_OUTPUT
+            echo "docs_path=docs/generated/general_docs.md" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create PR with documentation changes
+        if: steps.generate-docs.outputs.docs_created == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs: Update documentation via AI assistant"
+          title: "AI-generated documentation improvements"
+          body: |
+            Este PR fue generado automáticamente por el AI Documentation Agent en respuesta a #${{ needs.should-run.outputs.issue-number }}
+
+            Contiene documentación mejorada para:
+            ${{ steps.parse-context.outputs.target_module || 'Proyecto general' }}
+
+            Por favor revisa los cambios y realiza cualquier ajuste necesario.
+          branch: ai-docs-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+          base: ${{ github.ref }}
+          labels: documentation
+
+      - name: Comment on issue
+        if: needs.should-run.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ needs.should-run.outputs.issue-number }}');
+            if (!issueNumber) return;
+
+            const docsCreated = '${{ steps.generate-docs.outputs.docs_created }}' === 'true';
+            let comment;
+
+            if (docsCreated) {
+              comment = `🤖 **AI Documentation Agent** ha completado la tarea.\n\n` +
+                        `Se ha creado un PR con la documentación mejorada para ` +
+                        `${{ steps.parse-context.outputs.target_module || 'el proyecto general' }}.\n\n` +
+                        `Por favor revisa los cambios y realiza cualquier ajuste necesario.`;
+            } else {
+              comment = `🤖 **AI Documentation Agent** no pudo completar la tarea.\n\n` +
+                        `No se encontró el módulo especificado o hubo un error durante el proceso.`;
+            }
+
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

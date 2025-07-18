@@ -1,0 +1,416 @@
+name: AI Feature Development Agent
+# Agente especializado en implementar nuevas características
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  workflow_run:
+    workflows: ["AI Agent Orchestrator"]
+    types:
+      - completed
+
+jobs:
+  should-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-feature-task == 'true' }}
+      issue-number: ${{ steps.get-issue.outputs.issue-number }}
+      context: ${{ steps.get-context.outputs.context }}
+    steps:
+      - id: check-label
+        if: github.event_name != 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const hasLabel = context.payload.label &&
+                            context.payload.label.name === 'ai:feature';
+            core.setOutput('has-label', hasLabel.toString());
+
+      - id: check-workflow
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const workflowRun = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+
+            // Intentar encontrar el contexto del orquestador
+            let hasFeatureTask = false;
+            try {
+              // Obtener los jobs de la ejecución del workflow
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id
+              });
+
+              // Buscar en los outputs del job triage
+              for (const job of jobs.data.jobs) {
+                if (job.name === 'triage') {
+                  // Si el job tiene steps con outputs
+                  const steps = job.steps || [];
+                  for (const step of steps) {
+                    if (step.name === 'Analyze request and assign labels' && step.outputs) {
+                      const assignedLabels = step.outputs.assigned_labels || '';
+                      hasFeatureTask = assignedLabels.includes('ai:feature');
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`Error checking workflow outputs: ${error}`);
+            }
+
+            core.setOutput('has-feature-task', hasFeatureTask.toString());
+
+      - id: get-issue
+        if: steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-feature-task == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let issueNumber;
+
+            if (context.payload.issue) {
+              issueNumber = context.payload.issue.number;
+            } else if (context.payload.pull_request) {
+              issueNumber = context.payload.pull_request.number;
+            } else {
+              // Intentar obtener del contexto del orquestador
+              issueNumber = null;
+            }
+
+            core.setOutput('issue-number', issueNumber ? issueNumber.toString() : '');
+
+      - id: get-context
+        if: steps.get-issue.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issueNumber = parseInt(steps.get-issue.outputs.issue-number);
+            if (!issueNumber) {
+              core.setOutput('context', '{}');
+              return;
+            }
+
+            // Obtener los detalles del issue para entender la funcionalidad solicitada
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            // Obtener todos los comentarios y buscar el contexto del orquestador
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            let taskContext = {
+              title: issue.data.title,
+              body: issue.data.body
+            };
+
+            for (const comment of comments.data) {
+              if (comment.body.includes('AI Orchestrator Activado')) {
+                // Extraer JSON del comentario
+                const match = comment.body.match(/```json\n([\s\S]*?)\n```/);
+                if (match && match[1]) {
+                  try {
+                    const orchestratorContext = JSON.parse(match[1]);
+                    taskContext = {...taskContext, ...orchestratorContext};
+                    break;
+                  } catch (e) {
+                    console.log('Error parsing context JSON');
+                  }
+                }
+              }
+            }
+
+            core.setOutput('context', JSON.stringify(taskContext));
+
+  develop-feature:
+    needs: should-run
+    if: needs.should-run.outputs.run-job == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Parse feature request context
+        id: parse-context
+        run: |
+          ISSUE_NUMBER="${{ needs.should-run.outputs.issue-number }}"
+          CONTEXT='${{ needs.should-run.outputs.context }}'
+
+          # Extraer información relevante
+          TARGET_MODULE=$(echo $CONTEXT | jq -r '.targetModule // ""')
+          FEATURE_PRIORITY=$(echo $CONTEXT | jq -r '.featurePriority // "normal"')
+          FEATURE_TITLE=$(echo $CONTEXT | jq -r '.title // "Nueva funcionalidad"')
+          FEATURE_BODY=$(echo $CONTEXT | jq -r '.body // ""')
+
+          # Guardar para los siguientes pasos
+          echo "target_module=$TARGET_MODULE" >> $GITHUB_OUTPUT
+          echo "feature_priority=$FEATURE_PRIORITY" >> $GITHUB_OUTPUT
+          echo "feature_title=$FEATURE_TITLE" >> $GITHUB_OUTPUT
+
+          # Crear un archivo temporal con la descripción de la feature
+          echo "$FEATURE_BODY" > feature_description.txt
+
+          if [ -z "$TARGET_MODULE" ]; then
+            echo "No se especificó módulo objetivo, intentaré inferirlo del contexto"
+          else
+            echo "Desarrollaré una nueva funcionalidad para el módulo $TARGET_MODULE"
+          fi
+
+          echo "Prioridad de la funcionalidad: $FEATURE_PRIORITY"
+
+      - name: Analyze codebase for feature implementation
+        id: analyze
+        run: |
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+          FEATURE_TITLE="${{ steps.parse-context.outputs.feature_title }}"
+
+          # Leer descripción de la feature
+          FEATURE_DESCRIPTION=$(cat feature_description.txt)
+
+          # Aquí normalmente analizaríamos la base de código para entender
+          # dónde implementar la nueva funcionalidad y cómo integrarla
+
+          echo "Analizando la base de código para implementar: $FEATURE_TITLE"
+
+          # Simulamos el proceso de análisis
+          if [ -n "$TARGET_MODULE" ]; then
+            MODULE_PATH="src/instagram_analyzer/$TARGET_MODULE"
+
+            if [ -d "$MODULE_PATH" ]; then
+              echo "El módulo $TARGET_MODULE existe, analizando estructura"
+              echo "target_exists=true" >> $GITHUB_OUTPUT
+              echo "implementation_path=$MODULE_PATH" >> $GITHUB_OUTPUT
+            else
+              echo "El módulo $TARGET_MODULE no existe, será necesario crearlo"
+              echo "target_exists=false" >> $GITHUB_OUTPUT
+              echo "implementation_path=src/instagram_analyzer/$TARGET_MODULE" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Intentar inferir el módulo basado en palabras clave en la descripción
+            if [[ "$FEATURE_DESCRIPTION" == *"export"* ]] || [[ "$FEATURE_DESCRIPTION" == *"exportar"* ]]; then
+              echo "target_exists=true" >> $GITHUB_OUTPUT
+              echo "implementation_path=src/instagram_analyzer/exporters" >> $GITHUB_OUTPUT
+              echo "inferred_module=exporters" >> $GITHUB_OUTPUT
+            elif [[ "$FEATURE_DESCRIPTION" == *"parse"* ]] || [[ "$FEATURE_DESCRIPTION" == *"parsing"* ]] || [[ "$FEATURE_DESCRIPTION" == *"parser"* ]]; then
+              echo "target_exists=true" >> $GITHUB_OUTPUT
+              echo "implementation_path=src/instagram_analyzer/parsers" >> $GITHUB_OUTPUT
+              echo "inferred_module=parsers" >> $GITHUB_OUTPUT
+            elif [[ "$FEATURE_DESCRIPTION" == *"analiz"* ]] || [[ "$FEATURE_DESCRIPTION" == *"analy"* ]]; then
+              echo "target_exists=true" >> $GITHUB_OUTPUT
+              echo "implementation_path=src/instagram_analyzer/analyzers" >> $GITHUB_OUTPUT
+              echo "inferred_module=analyzers" >> $GITHUB_OUTPUT
+            else
+              echo "No se pudo inferir un módulo específico, implementando como utilidad general"
+              echo "target_exists=true" >> $GITHUB_OUTPUT
+              echo "implementation_path=src/instagram_analyzer/utils" >> $GITHUB_OUTPUT
+              echo "inferred_module=utils" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+          # Determinar el nombre de la funcionalidad para el archivo
+          FEATURE_NAME=$(echo "$FEATURE_TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | sed 's/[^a-z0-9_]//g')
+          echo "feature_name=$FEATURE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Design feature implementation
+        id: design
+        run: |
+          IMPLEMENTATION_PATH="${{ steps.analyze.outputs.implementation_path }}"
+          TARGET_EXISTS="${{ steps.analyze.outputs.target_exists }}"
+          FEATURE_NAME="${{ steps.analyze.outputs.feature_name }}"
+          INFERRED_MODULE="${{ steps.analyze.outputs.inferred_module }}"
+          TARGET_MODULE="${{ steps.parse-context.outputs.target_module }}"
+
+          # Aquí normalmente diseñaríamos la arquitectura de la nueva funcionalidad
+          # y crearíamos los archivos necesarios
+
+          echo "Diseñando implementación de la funcionalidad: $FEATURE_NAME"
+
+          # Crear directorios si no existen
+          mkdir -p "$IMPLEMENTATION_PATH"
+
+          # Creamos un archivo principal para la funcionalidad
+          FEATURE_FILE="$IMPLEMENTATION_PATH/${FEATURE_NAME}.py"
+          echo "# Nueva funcionalidad: ${FEATURE_NAME}" > "$FEATURE_FILE"
+          echo "# Generado por AI Feature Development Agent" >> "$FEATURE_FILE"
+          echo "# Fecha: $(date)" >> "$FEATURE_FILE"
+          echo "" >> "$FEATURE_FILE"
+          echo "from typing import Dict, List, Any" >> "$FEATURE_FILE"
+          echo "" >> "$FEATURE_FILE"
+          echo "class ${FEATURE_NAME^}:" >> "$FEATURE_FILE"
+          echo "    \"\"\"Implementación de la nueva funcionalidad $FEATURE_NAME." >> "$FEATURE_FILE"
+          echo "" >> "$FEATURE_FILE"
+          echo "    Esta clase proporciona la implementación de la funcionalidad solicitada" >> "$FEATURE_FILE"
+          echo "    en el issue #${{ needs.should-run.outputs.issue-number }}." >> "$FEATURE_FILE"
+          echo "    \"\"\"" >> "$FEATURE_FILE"
+          echo "" >> "$FEATURE_FILE"
+          echo "    def __init__(self, config: Dict[str, Any] = None):" >> "$FEATURE_FILE"
+          echo "        self.config = config or {}" >> "$FEATURE_FILE"
+          echo "" >> "$FEATURE_FILE"
+          echo "    def execute(self, data: Any) -> Dict[str, Any]:" >> "$FEATURE_FILE"
+          echo "        \"\"\"Ejecuta la funcionalidad principal." >> "$FEATURE_FILE"
+          echo "" >> "$FEATURE_FILE"
+          echo "        Args:" >> "$FEATURE_FILE"
+          echo "            data: Los datos de entrada para procesar" >> "$FEATURE_FILE"
+          echo "" >> "$FEATURE_FILE"
+          echo "        Returns:" >> "$FEATURE_FILE"
+          echo "            Un diccionario con los resultados del procesamiento" >> "$FEATURE_FILE"
+          echo "        \"\"\"" >> "$FEATURE_FILE"
+          echo "        # Implementación simulada" >> "$FEATURE_FILE"
+          echo "        result = {}" >> "$FEATURE_FILE"
+          echo "        # TODO: Implementar lógica real de la funcionalidad" >> "$FEATURE_FILE"
+          echo "        return result" >> "$FEATURE_FILE"
+
+          # También creamos un archivo de test
+          TEST_DIR="tests/unit"
+          if [ "$INFERRED_MODULE" != "" ]; then
+            TEST_DIR="tests/unit/$INFERRED_MODULE"
+          elif [ "$TARGET_MODULE" != "" ]; then
+            TEST_DIR="tests/unit/$TARGET_MODULE"
+          fi
+
+          mkdir -p "$TEST_DIR"
+
+          TEST_FILE="$TEST_DIR/test_${FEATURE_NAME}.py"
+          echo "# Tests para la funcionalidad: ${FEATURE_NAME}" > "$TEST_FILE"
+          echo "# Generado por AI Feature Development Agent" >> "$TEST_FILE"
+          echo "# Fecha: $(date)" >> "$TEST_FILE"
+          echo "" >> "$TEST_FILE"
+          echo "import pytest" >> "$TEST_FILE"
+          echo "from instagram_analyzer.${INFERRED_MODULE:-$TARGET_MODULE}.${FEATURE_NAME} import ${FEATURE_NAME^}" >> "$TEST_FILE"
+          echo "" >> "$TEST_FILE"
+          echo "def test_${FEATURE_NAME}_initialization():" >> "$TEST_FILE"
+          echo "    \"\"\"Prueba la inicialización de la clase ${FEATURE_NAME^}." >> "$TEST_FILE"
+          echo "    \"\"\"" >> "$TEST_FILE"
+          echo "    feature = ${FEATURE_NAME^}()" >> "$TEST_FILE"
+          echo "    assert feature is not None" >> "$TEST_FILE"
+          echo "    assert feature.config == {}" >> "$TEST_FILE"
+          echo "" >> "$TEST_FILE"
+          echo "def test_${FEATURE_NAME}_with_config():" >> "$TEST_FILE"
+          echo "    \"\"\"Prueba la inicialización con configuración personalizada." >> "$TEST_FILE"
+          echo "    \"\"\"" >> "$TEST_FILE"
+          echo "    config = {'param1': 'value1', 'param2': 42}" >> "$TEST_FILE"
+          echo "    feature = ${FEATURE_NAME^}(config)" >> "$TEST_FILE"
+          echo "    assert feature.config == config" >> "$TEST_FILE"
+          echo "" >> "$TEST_FILE"
+          echo "def test_${FEATURE_NAME}_execute():" >> "$TEST_FILE"
+          echo "    \"\"\"Prueba la ejecución de la funcionalidad principal." >> "$TEST_FILE"
+          echo "    \"\"\"" >> "$TEST_FILE"
+          echo "    feature = ${FEATURE_NAME^}()" >> "$TEST_FILE"
+          echo "    result = feature.execute({})" >> "$TEST_FILE"
+          echo "    assert isinstance(result, dict)" >> "$TEST_FILE"
+
+          # Opcionalmente, actualizar el __init__.py para importar la nueva clase
+          INIT_FILE="$IMPLEMENTATION_PATH/__init__.py"
+          if [ -f "$INIT_FILE" ]; then
+            echo "" >> "$INIT_FILE"
+            echo "from .$FEATURE_NAME import ${FEATURE_NAME^}" >> "$INIT_FILE"
+          else
+            echo "# Este archivo fue generado por AI Feature Development Agent" > "$INIT_FILE"
+            echo "# Fecha: $(date)" >> "$INIT_FILE"
+            echo "" >> "$INIT_FILE"
+            echo "from .$FEATURE_NAME import ${FEATURE_NAME^}" >> "$INIT_FILE"
+          fi
+
+          echo "feature_file=$FEATURE_FILE" >> $GITHUB_OUTPUT
+          echo "test_file=$TEST_FILE" >> $GITHUB_OUTPUT
+          echo "feature_implementation_ready=true" >> $GITHUB_OUTPUT
+
+      - name: Run tests for new feature
+        if: steps.design.outputs.feature_implementation_ready == 'true'
+        run: |
+          TEST_FILE="${{ steps.design.outputs.test_file }}"
+
+          echo "Ejecutando tests para la nueva funcionalidad..."
+
+          # En un escenario real, ejecutaríamos pytest para estos archivos
+          python -m pytest "$TEST_FILE" -v || echo "Los tests pueden requerir ajustes manuales"
+
+      - name: Create PR with new feature
+        if: steps.design.outputs.feature_implementation_ready == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "feat: Add ${{ steps.analyze.outputs.feature_name }} feature"
+          title: "Nueva funcionalidad: ${{ steps.parse-context.outputs.feature_title }}"
+          body: |
+            Este PR fue generado automáticamente por el AI Feature Development Agent en respuesta a #${{ needs.should-run.outputs.issue-number }}
+
+            Implementa una nueva funcionalidad:
+            - Nombre: ${{ steps.analyze.outputs.feature_name }}
+            - Módulo: ${{ steps.parse-context.outputs.target_module || steps.analyze.outputs.inferred_module }}
+            - Prioridad: ${{ steps.parse-context.outputs.feature_priority }}
+
+            Archivos creados:
+            - ${{ steps.design.outputs.feature_file }}
+            - ${{ steps.design.outputs.test_file }}
+
+            La implementación incluye:
+            - Clase base con la estructura esencial
+            - Documentación básica
+            - Tests unitarios para la funcionalidad
+
+            TODO antes de integrar:
+            - Completar la implementación real de la funcionalidad
+            - Verificar los tests y agregar casos adicionales
+            - Considerar integración con otros módulos según sea necesario
+          branch: ai-feature-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}-${{ steps.analyze.outputs.feature_name }}
+          base: ${{ github.ref }}
+          labels: feature,needs-review
+
+      - name: Comment on issue
+        if: needs.should-run.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ needs.should-run.outputs.issue-number }}');
+            if (!issueNumber) return;
+
+            const featureImplemented = '${{ steps.design.outputs.feature_implementation_ready }}' === 'true';
+            let comment;
+
+            if (featureImplemented) {
+              comment = `🤖 **AI Feature Development Agent** ha completado la tarea.\n\n` +
+                        `Se ha creado un PR con la implementación base para la funcionalidad ` +
+                        `"${{ steps.parse-context.outputs.feature_title }}".\n\n` +
+                        `Módulo: ${{ steps.parse-context.outputs.target_module || steps.analyze.outputs.inferred_module }}\n\n` +
+                        `La implementación incluye:\n` +
+                        `- Estructura base de clases\n` +
+                        `- Tests unitarios iniciales\n` +
+                        `- Documentación básica\n\n` +
+                        `Por favor revisa la implementación y completa los TODO marcados en el código.`;
+            } else {
+              comment = `🤖 **AI Feature Development Agent** no pudo completar la tarea.\n\n` +
+                        `Hubo un problema al implementar la funcionalidad solicitada. ` +
+                        `Por favor proporciona más detalles sobre lo que necesitas implementar.`;
+            }
+
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

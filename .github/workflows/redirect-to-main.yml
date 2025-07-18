@@ -1,0 +1,29 @@
+# This workflow has been consolidated into main-workflow.yml
+# This file is maintained for backward compatibility
+# See docs/CONSOLIDATED_WORKFLOW.md for more information
+
+on:
+  workflow_dispatch:
+
+jobs:
+  redirect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Redirect to main workflow
+        run: echo "This workflow has been consolidated into main-workflow.yml. Please use that workflow instead."
+
+      - name: Trigger main workflow
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'main-workflow.yml',
+              ref: 'v0.2.05',
+              inputs: {
+                task_type: 'review',
+                target_module: ''
+              }
+            });
