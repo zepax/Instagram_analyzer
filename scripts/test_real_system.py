@@ -84,6 +84,9 @@ def test_basic_functionality():
         # Verificar que puede detectar datos
         print("🔍 Detectando tipos de datos disponibles...")
 
+        # Basic validation to use the analyzer
+        _ = analyzer.validate_data()
+
         # Este es un test básico sin ejecutar análisis completo
         print("✅ Analyzer inicializado sin errores")
 
@@ -108,6 +111,9 @@ def test_conversation_detection():
         data_path = Path("data/sample_exports/instagram-pcFuHXmB")
         extractor = ConversationExtractor(data_path)
         print("✅ ConversationExtractor creado correctamente")
+
+        # Basic validation to use the extractor
+        _ = extractor.validate_data_structure()
 
         # Verificar que puede leer la estructura básica
         messages_path = data_path / "messages"

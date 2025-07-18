@@ -502,11 +502,11 @@ class ConversationAnalyzer:
         ]
 
         length_ranges = {
-            "very_short_1_5": len([l for l in lengths if 1 <= l <= 5]),
-            "short_6_20": len([l for l in lengths if 6 <= l <= 20]),
-            "medium_21_100": len([l for l in lengths if 21 <= l <= 100]),
-            "long_101_500": len([l for l in lengths if 101 <= l <= 500]),
-            "very_long_500_plus": len([l for l in lengths if l > 500]),
+            "very_short_1_5": len([length for length in lengths if 1 <= length <= 5]),
+            "short_6_20": len([length for length in lengths if 6 <= length <= 20]),
+            "medium_21_100": len([length for length in lengths if 21 <= length <= 100]),
+            "long_101_500": len([length for length in lengths if 101 <= length <= 500]),
+            "very_long_500_plus": len([length for length in lengths if length > 500]),
         }
 
         return length_ranges

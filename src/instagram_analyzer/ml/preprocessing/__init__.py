@@ -50,22 +50,16 @@ def get_preprocessor(name: str) -> Any:
 
 def get_text_preprocessor() -> Any:
     """Get standard text preprocessor."""
-    from instagram_analyzer.ml.preprocessing.text import TextPreprocessor
-
     return TextPreprocessor()
 
 
 def get_image_preprocessor() -> Any:
     """Get standard image preprocessor."""
-    from instagram_analyzer.ml.preprocessing.image import ImagePreprocessor
-
     return ImagePreprocessor()
 
 
 def get_feature_preprocessor() -> Any:
     """Get standard feature preprocessor."""
-    from instagram_analyzer.ml.preprocessing.feature import FeatureEngineer
-
     return FeatureEngineer()
 
 

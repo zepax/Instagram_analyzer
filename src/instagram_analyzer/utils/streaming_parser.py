@@ -29,21 +29,21 @@ class StreamingJSONParser:
         """
         self.memory_threshold = memory_threshold
         self.logger = logger
-    
-    def parse(self, file_path: Union[str, Path], processor_func: Any) -> List[Any]:
+
+    def parse(self, file_path: Union[str, Path], processor_func: Any) -> list[Any]:
         """Parse file and process with given function.
-        
+
         Args:
             file_path: Path to file
             processor_func: Function to process data
-            
+
         Returns:
             List of processed items
         """
         path_obj = Path(file_path) if isinstance(file_path, str) else file_path
         data = self.parse_file(path_obj)
-        
-        if hasattr(data, '__iter__') and not isinstance(data, (str, dict)):
+
+        if hasattr(data, "__iter__") and not isinstance(data, (str, dict)):
             # Iterator from streaming
             return [item for item in data if item is not None]
         elif isinstance(data, dict):
@@ -52,9 +52,7 @@ class StreamingJSONParser:
         else:
             return []
 
-    def parse_file(
-        self, file_path: Path
-    ) -> Any:
+    def parse_file(self, file_path: Path) -> Any:
         """Parse JSON file, choosing streaming vs. standard based on file size.
 
         Args:
@@ -79,7 +77,7 @@ class StreamingJSONParser:
             )
             return self._parse_standard(file_path)
 
-    def _parse_standard(self, file_path: Path) -> Dict[str, Any]:
+    def _parse_standard(self, file_path: Path) -> dict[str, Any]:
         """Standard JSON parsing for smaller files."""
         try:
             with open(file_path, encoding="utf-8") as f:
@@ -88,7 +86,7 @@ class StreamingJSONParser:
             self.logger.error(f"Failed to parse {file_path}: {e}")
             return {}
 
-    def _parse_streaming(self, file_path: Path) -> Iterator[Dict[str, Any]]:
+    def _parse_streaming(self, file_path: Path) -> Iterator[dict[str, Any]]:
         """Streaming JSON parsing for large files."""
         if not HAS_IJSON:
             self.logger.warning("ijson not available, falling back to standard parsing")
@@ -125,7 +123,7 @@ class StreamingJSONParser:
 
         except Exception as e:
             self.logger.error(f"Streaming parsing failed for {file_path}: {e}")
-            
+
         # Fall back to standard parsing
         data = self._parse_standard(file_path)
         if isinstance(data, list):
@@ -134,7 +132,7 @@ class StreamingJSONParser:
         elif isinstance(data, dict):
             yield data
 
-    def parse_posts_streaming(self, file_path: Path) -> Iterator[Dict[str, Any]]:
+    def parse_posts_streaming(self, file_path: Path) -> Iterator[dict[str, Any]]:
         """Parse posts with streaming optimization."""
         data = self.parse_file(file_path)
 
@@ -154,7 +152,7 @@ class StreamingJSONParser:
             # Iterator from streaming parser
             yield from data
 
-    def parse_stories_streaming(self, file_path: Path) -> Iterator[Dict[str, Any]]:
+    def parse_stories_streaming(self, file_path: Path) -> Iterator[dict[str, Any]]:
         """Parse stories with streaming optimization."""
         data = self.parse_file(file_path)
 
@@ -174,7 +172,7 @@ class StreamingJSONParser:
             # Iterator from streaming parser
             yield from data
 
-    def parse_reels_streaming(self, file_path: Path) -> Iterator[Dict[str, Any]]:
+    def parse_reels_streaming(self, file_path: Path) -> Iterator[dict[str, Any]]:
         """Parse reels with streaming optimization."""
         data = self.parse_file(file_path)
 
@@ -209,20 +207,22 @@ class BatchProcessor:
         self.gc_frequency = gc_frequency
         self.batch_count = 0
         self.logger = logger
-    
-    def process_posts(self, data: Any) -> List[Any]:
+
+    def process_posts(self, data: Any) -> list[Any]:
         """Process posts data."""
         from ..parsers.json_parser import JSONParser
+
         parser = JSONParser()
         if isinstance(data, list):
             return parser.parse_posts(data)
         elif isinstance(data, dict):
             return parser.parse_posts([data])
         return []
-    
-    def process_stories(self, data: Any) -> List[Any]:
+
+    def process_stories(self, data: Any) -> list[Any]:
         """Process stories data."""
         from ..parsers.json_parser import JSONParser
+
         parser = JSONParser()
         if isinstance(data, list):
             return parser.parse_stories(data)
@@ -230,7 +230,9 @@ class BatchProcessor:
             return parser.parse_stories([data])
         return []
 
-    def process_in_batches(self, items: Iterator[Any], processor_func: Any) -> Iterator[Any]:
+    def process_in_batches(
+        self, items: Iterator[Any], processor_func: Any
+    ) -> Iterator[Any]:
         """Process items in batches with memory management.
 
         Args:
@@ -263,7 +265,7 @@ class BatchProcessor:
         if batch:
             yield from self._process_batch(batch, processor_func)
 
-    def _process_batch(self, batch: List[Any], processor_func: Any) -> List[Any]:
+    def _process_batch(self, batch: list[Any], processor_func: Any) -> list[Any]:
         """Process a single batch of items."""
         processed = []
         for item in batch:

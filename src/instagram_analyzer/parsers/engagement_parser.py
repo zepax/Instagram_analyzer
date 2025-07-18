@@ -29,9 +29,9 @@ class EngagementParser:
             Dictionary containing engagement data
         """
         engagement_data = {
-            "liked_posts": [],
-            "post_comments": [],
-            "reel_comments": [],
+            "liked_posts": {},
+            "post_comments": defaultdict(list),
+            "reel_comments": defaultdict(list),
             "total_likes_given": 0,
             "total_comments_made": 0,
         }
@@ -39,76 +39,79 @@ class EngagementParser:
         # Parse liked posts
         for file_path in engagement_files.get("liked_posts", []):
             likes_data = self._parse_liked_posts(file_path)
-            # Store in cache - convert to dict for quick lookup
             for item in likes_data:
                 if "href" in item:
                     self.liked_posts_cache[item["href"]] = item
-            engagement_data["liked_posts"].extend(likes_data)
+                    engagement_data["liked_posts"][item["href"]] = item
             engagement_data["total_likes_given"] += len(likes_data)
 
         # Parse post comments
         for file_path in engagement_files.get("post_comments", []):
             comments_data = self._parse_post_comments(file_path)
-            # Group by post_url for cache
             for item in comments_data:
                 post_url = item.get("post_url", "unknown_post")
                 self.post_comments_cache[post_url].append(item)
-            engagement_data["post_comments"].extend(comments_data)
+                engagement_data["post_comments"][post_url].append(item)
             engagement_data["total_comments_made"] += len(comments_data)
 
         # Parse reel comments
         for file_path in engagement_files.get("reel_comments", []):
             comments_data = self._parse_reel_comments(file_path)
-            # Group by href for cache
             for item in comments_data:
                 reel_url = item.get("href", "unknown_reel")
                 self.reel_comments_cache[reel_url].append(item)
-
-            engagement_data["reel_comments"].extend(comments_data)
+                engagement_data["reel_comments"][reel_url].append(item)
             engagement_data["total_comments_made"] += len(comments_data)
 
         return engagement_data
 
-    def _parse_liked_posts(self, file_path: Path) -> dict[str, Any]:
+    def _parse_liked_posts(self, file_path: Path) -> list[dict[str, Any]]:
         """Parse liked posts file.
 
         Args:
             file_path: Path to liked_posts.json file
 
         Returns:
-            Dictionary mapping post URLs to like data
+            List of like data dicts
         """
         liked_posts = []
         data = safe_json_load(file_path)
-
         if not data:
             return liked_posts
-
-        # Handle different data structures
-        likes_data = data.get("likes_media_likes", [])
-        if not likes_data:
-            # Try alternative structure
-            likes_data = data.get("media_likes", [])
-
+        likes_data = (
+            data.get("liked_posts")
+            or data.get("likes_media_likes")
+            or data.get("media_likes")
+            or []
+        )
         for like_entry in likes_data:
             title = like_entry.get("title", "")
             string_list_data = like_entry.get("string_list_data", [])
-
             for like_data in string_list_data:
                 href = like_data.get("href", "")
-                timestamp = like_data.get("timestamp", 0)
-
+                timestamp = like_data.get("timestamp", like_entry.get("timestamp", None))
                 if href:
                     liked_posts.append(
                         {
                             "title": title,
                             "href": href,
                             "timestamp": timestamp,
-                            "datetime": parse_instagram_date(timestamp),
+                            "datetime": (
+                                parse_instagram_date(timestamp) if timestamp else None
+                            ),
                         }
                     )
-
         return liked_posts
+
+    def _extract_post_url_from_href(self, url: str) -> str:
+        """Extracts the canonical post/reel URL from a given href, removing query params."""
+        if not isinstance(url, str) or not url:
+            return url
+        if "/p/" in url:
+            return url.split("?", 1)[0]
+        if "/reel/" in url:
+            return url.split("?", 1)[0]
+        return url
 
     def _parse_post_comments(self, file_path: Path) -> list[dict[str, Any]]:
         """Parse post comments file.

@@ -1,16 +1,239 @@
-# Instagram Analyzer - Development Makefile
+# Instagram Analyzer - Comprehensive Development Makefile
+# This Makefile provides all essential development workflow commands
 
-.PHONY: help install install-dev test test-unit test-integration test-cov lint format type-check security clean build docs serve-docs pre-commit setup-dev
+# Variables
+PYTHON = python3
+POETRY = poetry
+PROJECT_NAME = instagram-analyzer
+SRC_DIR = src/instagram_analyzer
+TESTS_DIR = tests
+DOCS_DIR = docs
+
+# Colors for output
+RED = \033[0;31m
+GREEN = \033[0;32m
+YELLOW = \033[0;33m
+BLUE = \033[0;34m
+MAGENTA = \033[0;35m
+CYAN = \033[0;36m
+WHITE = \033[0;37m
+RESET = \033[0m
 
 # Default target
-help: ## Show this help message
-	@echo "Instagram Analyzer - Development Commands"
-	@echo "========================================="
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+.DEFAULT_GOAL := help
 
-# Installation
-install: ## Install production dependencies
-	poetry install --only=main
+# Help target
+.PHONY: help
+help: ## Show this help message
+	@echo "$(CYAN)Instagram Analyzer Development Makefile$(RESET)"
+	@echo "$(YELLOW)Usage: make [target]$(RESET)"
+	@echo ""
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(GREEN)%-20s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+# Git Automation Targets
+.PHONY: git-setup
+git-setup: ## Setup git automation and hooks
+	@echo "$(BLUE)Setting up git automation...$(RESET)"
+	@bash scripts/setup-git-automation.sh
+
+.PHONY: branch-new
+branch-new: ## Create new feature branch interactively
+	@echo "$(BLUE)Creating new feature branch...$(RESET)"
+	@python scripts/git-automation.py --interactive
+
+.PHONY: branch-history
+branch-history: ## Show branch creation history
+	@echo "$(BLUE)Branch History:$(RESET)"
+	@python scripts/git-automation.py --history
+
+.PHONY: git-config
+git-config: ## Show git automation configuration
+	@echo "$(BLUE)Git Automation Configuration:$(RESET)"
+	@python scripts/git-automation.py --config
+
+# Quick branch creation targets
+.PHONY: feat
+feat: ## Create feature branch (usage: make feat DESC="description")
+	@python scripts/git-automation.py --type feature --description "$(DESC)"
+
+.PHONY: fix
+fix: ## Create bugfix branch (usage: make fix DESC="description")
+	@python scripts/git-automation.py --type bugfix --description "$(DESC)"
+
+.PHONY: perf
+perf: ## Create optimization branch (usage: make perf DESC="description")
+	@python scripts/git-automation.py --type optimization --description "$(DESC)"
+
+.PHONY: docs
+docs: ## Create documentation branch (usage: make docs DESC="description")
+	@python scripts/git-automation.py --type documentation --description "$(DESC)"
+
+# Setup and Installation
+.PHONY: setup-dev
+setup-dev: ## Complete development environment setup
+	@echo "$(BLUE)Setting up development environment...$(RESET)"
+	@$(POETRY) install --with dev
+	@$(POETRY) run pre-commit install
+	@make git-setup
+	@echo "$(GREEN)✅ Development environment ready!$(RESET)"
+
+.PHONY: install-dev
+install-dev: ## Install with development dependencies
+	@echo "$(BLUE)Installing development dependencies...$(RESET)"
+	@$(POETRY) install --with dev
+
+.PHONY: install
+install: ## Install production dependencies only
+	@echo "$(BLUE)Installing production dependencies...$(RESET)"
+	@$(POETRY) install --only main
+
+# Quality and Testing
+.PHONY: quality
+quality: format lint type-check security test ## Run all quality checks (recommended)
+	@echo "$(GREEN)✅ All quality checks passed!$(RESET)"
+
+.PHONY: test
+test: ## Run all tests (automatically sets PYTHONPATH=src)
+	@echo "$(BLUE)Running tests...$(RESET)"
+	@PYTHONPATH=src $(POETRY) run pytest
+
+.PHONY: test-cov
+test-cov: ## Run tests with coverage report
+	@echo "$(BLUE)Running tests with coverage...$(RESET)"
+	@PYTHONPATH=src $(POETRY) run pytest --cov=$(SRC_DIR) --cov-report=html --cov-report=term
+
+.PHONY: test-fast
+test-fast: ## Run tests with minimal output
+	@echo "$(BLUE)Running fast tests...$(RESET)"
+	@PYTHONPATH=src $(POETRY) run pytest -x -q
+
+.PHONY: format
+format: ## Format code (black + isort)
+	@echo "$(BLUE)Formatting code...$(RESET)"
+	@$(POETRY) run black $(SRC_DIR)/ $(TESTS_DIR)/
+	@$(POETRY) run isort $(SRC_DIR)/ $(TESTS_DIR)/
+	@echo "$(GREEN)✅ Code formatted$(RESET)"
+
+.PHONY: lint
+lint: ## Lint code (flake8 + pydocstyle)
+	@echo "$(BLUE)Linting code...$(RESET)"
+	@$(POETRY) run flake8 $(SRC_DIR)/ $(TESTS_DIR)/
+	@$(POETRY) run pydocstyle $(SRC_DIR)/
+	@echo "$(GREEN)✅ Linting passed$(RESET)"
+
+.PHONY: type-check
+type-check: ## Type checking (mypy)
+	@echo "$(BLUE)Running type checks...$(RESET)"
+	@$(POETRY) run mypy $(SRC_DIR)/
+	@echo "$(GREEN)✅ Type checking passed$(RESET)"
+
+.PHONY: security
+security: ## Security checks (bandit + safety)
+	@echo "$(BLUE)Running security checks...$(RESET)"
+	@$(POETRY) run bandit -r $(SRC_DIR)/
+	@$(POETRY) run safety check
+	@echo "$(GREEN)✅ Security checks passed$(RESET)"
+
+# CI/CD Simulation
+.PHONY: ci-full
+ci-full: ## Simulate complete CI/CD pipeline
+	@echo "$(MAGENTA)🚀 Running complete CI/CD simulation...$(RESET)"
+	@make quality
+	@make test-cov
+	@echo "$(GREEN)✅ CI/CD simulation completed successfully!$(RESET)"
+
+.PHONY: pre-commit
+pre-commit: ## Run all pre-commit hooks
+	@echo "$(BLUE)Running pre-commit hooks...$(RESET)"
+	@$(POETRY) run pre-commit run --all-files
+
+# Development Utilities
+.PHONY: clean
+clean: ## Clean build artifacts and cache
+	@echo "$(BLUE)Cleaning build artifacts...$(RESET)"
+	@rm -rf build/
+	@rm -rf dist/
+	@rm -rf *.egg-info/
+	@rm -rf .pytest_cache/
+	@rm -rf .coverage
+	@rm -rf htmlcov/
+	@rm -rf .mypy_cache/
+	@rm -rf .ruff_cache/
+	@find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	@find . -name "*.pyc" -delete
+	@echo "$(GREEN)✅ Cleaned build artifacts$(RESET)"
+
+.PHONY: info
+info: ## Show environment information
+	@echo "$(CYAN)Development Environment Information:$(RESET)"
+	@echo "Python version: $(shell python --version)"
+	@echo "Poetry version: $(shell poetry --version)"
+	@echo "Project root: $(shell pwd)"
+	@echo "Virtual env: $(shell poetry env info --path)"
+	@echo "Dependencies: $(shell poetry show --tree --only main | wc -l) main, $(shell poetry show --tree --with dev | wc -l) total"
+
+.PHONY: show-deps
+show-deps: ## Show dependency tree
+	@echo "$(BLUE)Dependency tree:$(RESET)"
+	@$(POETRY) show --tree
+
+# Application Testing
+.PHONY: test-cli
+test-cli: ## Test CLI functionality
+	@echo "$(BLUE)Testing CLI functionality...$(RESET)"
+	@$(POETRY) run instagram-miner --help
+	@echo "$(GREEN)✅ CLI test passed$(RESET)"
+
+.PHONY: test-import
+test-import: ## Test package import
+	@echo "$(BLUE)Testing package import...$(RESET)"
+	@$(POETRY) run python -c "from instagram_analyzer import InstagramAnalyzer; print('✅ Import successful')"
+
+# Special targets for common workflows
+.PHONY: quick-check
+quick-check: test-fast lint ## Quick development check
+	@echo "$(GREEN)✅ Quick check passed$(RESET)"
+
+.PHONY: commit-ready
+commit-ready: format lint type-check test ## Prepare for commit
+	@echo "$(GREEN)✅ Ready to commit!$(RESET)"
+
+.PHONY: pr-ready
+pr-ready: ci-full ## Prepare for pull request
+	@echo "$(GREEN)✅ Ready for pull request!$(RESET)"
+
+# Git status helpers
+.PHONY: status
+status: ## Show git and development status
+	@echo "$(CYAN)Git Status:$(RESET)"
+	@git status --short
+	@echo ""
+	@echo "$(CYAN)Current Branch:$(RESET)"
+	@git branch --show-current
+	@echo ""
+	@echo "$(CYAN)Recent Commits:$(RESET)"
+	@git log --oneline -5
+
+# Development Workflow Examples
+.PHONY: workflow-example
+workflow-example: ## Show example development workflow
+	@echo "$(CYAN)Example Development Workflow:$(RESET)"
+	@echo "1. $(GREEN)make setup-dev$(RESET)              # Setup development environment"
+	@echo "2. $(GREEN)make branch-new$(RESET)              # Create feature branch interactively"
+	@echo "3. $(GREEN)make test$(RESET)                    # Run tests while developing"
+	@echo "4. $(GREEN)make quality$(RESET)                # Run all quality checks"
+	@echo "5. $(GREEN)git commit -m 'feat: ...'$(RESET)    # Commit changes (auto-formatted)"
+	@echo "6. $(GREEN)git push$(RESET)                     # Push branch"
+	@echo "7. Create PR on GitHub"
+	@echo ""
+	@echo "$(YELLOW)Quick Commands:$(RESET)"
+	@echo "$(GREEN)make feat DESC='new feature'$(RESET)    # Quick feature branch"
+	@echo "$(GREEN)make fix DESC='bug fix'$(RESET)         # Quick bugfix branch"
+	@echo "$(GREEN)make ci-full$(RESET)                   # Complete CI simulation"
+
+# Phony targets
+.PHONY: all
+all: setup-dev quality test-cov ## Complete setup and validation
 
 install-dev: ## Install all dependencies including dev tools
 	poetry install

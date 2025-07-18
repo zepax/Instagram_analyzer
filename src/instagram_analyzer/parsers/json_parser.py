@@ -57,8 +57,12 @@ class JSONParser:
             email = string_map.get("Email", {}).get("value", "")
             website = string_map.get("Website", {}).get("value", "")
             phone_number = string_map.get("Phone Number", {}).get("value", "")
-            is_private = string_map.get("Private Account", {}).get("value", "").lower() == "true"
-            is_verified = string_map.get("Verified", {}).get("value", "").lower() == "true"
+            is_private = (
+                string_map.get("Private Account", {}).get("value", "").lower() == "true"
+            )
+            is_verified = (
+                string_map.get("Verified", {}).get("value", "").lower() == "true"
+            )
         else:
             # Fallback to standard field names
             username = profile_data.get("username", "")
@@ -413,7 +417,7 @@ class JSONParser:
                 thumbnail_uri="",  # Will be set if available
                 ig_media_id=data.get("id", ""),
             )
-        except Exception as e:
+        except Exception:
             import traceback
 
             traceback.print_exc()
@@ -436,7 +440,7 @@ class JSONParser:
                 raw_data=data,
             )
             return story
-        except Exception as e:
+        except Exception:
             import traceback
 
             traceback.print_exc()
@@ -779,8 +783,6 @@ class JSONParser:
             "top_hashtags": [],
             "top_mentions": [],
         }
-
-        from collections import Counter
 
         all_hashtags = []
         all_mentions = []

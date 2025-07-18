@@ -59,7 +59,7 @@ def calculate_metrics(
             predictions = np.array(predictions)
         if not isinstance(targets, np.ndarray):
             targets = np.array(targets)
-    except:
+    except (TypeError, ValueError, AttributeError):
         logger.warning("Could not convert inputs to numpy arrays.")
 
     results = {}
@@ -129,12 +129,12 @@ def _calculate_sklearn_metric(
                     return float(
                         sklearn_metrics.roc_auc_score(targets, predictions[:, 1])
                     )
-                except:
+                except (TypeError, ValueError, AttributeError):
                     return float("nan")
             else:
                 try:
                     return float(sklearn_metrics.roc_auc_score(targets, predictions))
-                except:
+                except (TypeError, ValueError, AttributeError):
                     return float("nan")
 
     # Regression metrics
@@ -175,7 +175,7 @@ def _calculate_basic_metric(
 
         predictions = np.array(predictions)
         targets = np.array(targets)
-    except:
+    except (TypeError, ValueError, AttributeError):
         # If numpy is not available or conversion fails, use lists
         if not isinstance(predictions, list):
             predictions = list(predictions)

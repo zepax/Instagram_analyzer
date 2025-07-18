@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""
+Git prepare-commit-msg hook for Instagram Analyzer
+
+This hook automatically formats commit messages according to project standards
+and integrates with the git automation system.
+"""
+
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def get_current_branch():
+    """Get current git branch."""
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"], capture_output=True, text=True
+        )
+        return result.stdout.strip()
+    except Exception:
+        return "main"
+
+
+def parse_branch_name(branch_name):
+    """Parse branch name to extract type and description."""
+    # Pattern: feat/ui-compact-reports-20250718
+    pattern = r"^(feat|fix|perf|docs|test|infra)/(.+?)(?:-(\d{8}))?$"
+    match = re.match(pattern, branch_name)
+
+    if match:
+        prefix, description, date = match.groups()
+        type_map = {
+            "feat": "feature",
+            "fix": "bugfix",
+            "perf": "optimization",
+            "docs": "documentation",
+            "test": "testing",
+            "infra": "infrastructure",
+        }
+        return type_map.get(prefix, "feature"), description.replace("-", " ").title()
+
+    return None, None
+
+
+def format_commit_message(commit_file, message_source):
+    """Format commit message based on branch and project standards."""
+    # Read current commit message
+    with open(commit_file) as f:
+        original_message = f.read().strip()
+
+    # Skip if already formatted or is a merge commit
+    if "Co-Authored-By: Claude" in original_message or original_message.startswith(
+        "Merge"
+    ):
+        return
+
+    # Get branch information
+    branch = get_current_branch()
+    change_type, description = parse_branch_name(branch)
+
+    # Skip formatting for main branch
+    if branch == "main":
+        return
+
+    # Format the message
+    formatted_message = original_message
+
+    # Add type prefix if not present
+    if change_type and not re.match(
+        r"^(feat|fix|perf|docs|test|infra):", original_message
+    ):
+        type_prefix = {
+            "feature": "feat",
+            "bugfix": "fix",
+            "optimization": "perf",
+            "documentation": "docs",
+            "testing": "test",
+            "infrastructure": "infra",
+        }.get(change_type, "feat")
+
+        formatted_message = f"{type_prefix}: {original_message}"
+
+    # Add footer
+    footer = "\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+
+    if footer not in formatted_message:
+        formatted_message += footer
+
+    # Write formatted message back
+    with open(commit_file, "w") as f:
+        f.write(formatted_message)
+
+
+def main():
+    """Main hook execution."""
+    if len(sys.argv) < 2:
+        return
+
+    commit_file = sys.argv[1]
+    message_source = sys.argv[2] if len(sys.argv) > 2 else None
+
+    # Only format for normal commits (not merges, amendments, etc.)
+    if message_source in ["message", "template", None]:
+        format_commit_message(commit_file, message_source)
+
+
+if __name__ == "__main__":
+    main()

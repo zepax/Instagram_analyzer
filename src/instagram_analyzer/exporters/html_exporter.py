@@ -43,6 +43,8 @@ class HTMLExporter:
         output_path: Path,
         anonymize: bool = False,
         show_progress: bool = False,
+        compact: bool = False,
+        max_items: int = 100,
     ) -> Path:
         """Export analysis to HTML report.
 
@@ -51,6 +53,8 @@ class HTMLExporter:
             output_path: Directory to save the report
             anonymize: Whether to anonymize sensitive data
             show_progress: Whether to show progress bars
+            compact: Whether to generate a compact report (smaller file size)
+            max_items: Maximum number of items to include per section
 
         Returns:
             Path to the generated HTML file
@@ -67,9 +71,14 @@ class HTMLExporter:
             ) as progress:
                 main_task = progress.add_task("Generating HTML report", total=100)
 
+                # Set compact mode flag on analyzer for media processing
+                analyzer._compact_mode = compact
+
                 # Generate analysis data
                 progress.update(main_task, description="Collecting analysis data...")
-                report_data = self._generate_report_data(analyzer, anonymize)
+                report_data = self._generate_report_data(
+                    analyzer, anonymize, compact, max_items
+                )
                 progress.update(main_task, advance=60)
 
                 # Generate HTML content
@@ -87,8 +96,13 @@ class HTMLExporter:
                 progress.update(main_task, description="HTML report complete!")
                 return report_file
         else:
+            # Set compact mode flag on analyzer for media processing
+            analyzer._compact_mode = compact
+
             # Generate analysis data
-            report_data = self._generate_report_data(analyzer, anonymize)
+            report_data = self._generate_report_data(
+                analyzer, anonymize, compact, max_items
+            )
 
             # Generate HTML content
             html_content = self._render_template(report_data)
@@ -100,7 +114,9 @@ class HTMLExporter:
 
             return report_file
 
-    def _generate_report_data(self, analyzer: Any, anonymize: bool) -> dict[str, Any]:
+    def _generate_report_data(
+        self, analyzer: Any, anonymize: bool, compact: bool = False, max_items: int = 100
+    ) -> dict[str, Any]:
         """Generate comprehensive report data."""
         data = {
             "metadata": self._get_metadata(analyzer, anonymize),
@@ -108,14 +124,26 @@ class HTMLExporter:
             "temporal_analysis": self._get_temporal_analysis(analyzer),
             "engagement_analysis": self._get_engagement_analysis(analyzer),
             "content_analysis": self._get_content_analysis(analyzer),
-            "posts": self._get_posts_data(analyzer, anonymize),
-            "stories": self._get_stories_data(analyzer, anonymize),
-            "reels": self._get_reels_data(analyzer, anonymize),
+            "posts": self._get_posts_data(
+                analyzer, anonymize, max_items if compact else None
+            ),
+            "stories": self._get_stories_data(
+                analyzer, anonymize, max_items if compact else None
+            ),
+            "reels": self._get_reels_data(
+                analyzer, anonymize, max_items if compact else None
+            ),
             "charts_data": self._get_charts_data(analyzer),
-            "network_graph": self._get_network_graph_data(analyzer),
-            "additional_content": self._get_additional_content_data(analyzer),
+            "network_graph": (
+                self._get_network_graph_data(analyzer)
+                if not compact
+                else {"nodes": [], "links": []}
+            ),
+            "additional_content": self._get_additional_content_data(
+                analyzer, max_items if compact else None
+            ),
             "story_interactions": self._get_story_interactions_data(
-                analyzer, anonymize
+                analyzer, anonymize, max_items if compact else None
             ),
         }
 
@@ -191,8 +219,7 @@ class HTMLExporter:
             1
             for item in analyzer.recently_deleted
             if item.timestamp
-            and item.timestamp
-            > datetime.now(item.timestamp.tzinfo) - timedelta(days=30)
+            and item.timestamp > datetime.now(item.timestamp.tzinfo) - timedelta(days=30)
         )
 
         # Story interactions summary
@@ -291,9 +318,7 @@ class HTMLExporter:
                         "likes": p.likes_count,
                         "comments": p.comments_count,
                         "date": (
-                            p.timestamp.strftime("%Y-%m-%d")
-                            if p.timestamp
-                            else "Unknown"
+                            p.timestamp.strftime("%Y-%m-%d") if p.timestamp else "Unknown"
                         ),
                         "media_count": len(p.media),
                     }
@@ -307,9 +332,7 @@ class HTMLExporter:
                         "likes": p.likes_count,
                         "comments": p.comments_count,
                         "date": (
-                            p.timestamp.strftime("%Y-%m-%d")
-                            if p.timestamp
-                            else "Unknown"
+                            p.timestamp.strftime("%Y-%m-%d") if p.timestamp else "Unknown"
                         ),
                         "media_count": len(p.media),
                     }
@@ -318,9 +341,7 @@ class HTMLExporter:
             },
             "distribution": {
                 "avg_likes": (
-                    round(sum(likes_counts) / len(likes_counts), 1)
-                    if likes_counts
-                    else 0
+                    round(sum(likes_counts) / len(likes_counts), 1) if likes_counts else 0
                 ),
                 "median_likes": (
                     sorted(likes_counts)[len(likes_counts) // 2] if likes_counts else 0
@@ -441,34 +462,51 @@ class HTMLExporter:
             },
         }
 
-    def _get_posts_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
+    def _get_posts_data(
+        self, analyzer: Any, anonymize: bool, max_items: Optional[int] = None
+    ) -> list[dict[str, Any]]:
         """Get formatted posts data."""
+        sorted_posts = sorted(analyzer.posts, key=lambda x: x.timestamp, reverse=True)
+        if max_items:
+            sorted_posts = sorted_posts[:max_items]
         return [
-            self._format_post_for_report(p, analyzer, anonymize)
-            for p in sorted(analyzer.posts, key=lambda x: x.timestamp, reverse=True)
+            self._format_post_for_report(p, analyzer, anonymize) for p in sorted_posts
         ]
 
-    def _get_stories_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
+    def _get_stories_data(
+        self, analyzer: Any, anonymize: bool, max_items: Optional[int] = None
+    ) -> list[dict[str, Any]]:
         """Get formatted stories data."""
+        sorted_stories = sorted(analyzer.stories, key=lambda x: x.taken_at, reverse=True)
+        if max_items:
+            sorted_stories = sorted_stories[:max_items]
         return [
-            self._format_story_for_report(s, analyzer, anonymize)
-            for s in sorted(analyzer.stories, key=lambda x: x.taken_at, reverse=True)
+            self._format_story_for_report(s, analyzer, anonymize) for s in sorted_stories
         ]
 
-    def _get_reels_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
+    def _get_reels_data(
+        self, analyzer: Any, anonymize: bool, max_items: Optional[int] = None
+    ) -> list[dict[str, Any]]:
         """Get formatted reels data."""
+        sorted_reels = sorted(analyzer.reels, key=lambda x: x.taken_at, reverse=True)
+        if max_items:
+            sorted_reels = sorted_reels[:max_items]
         return [
-            self._format_reel_for_report(r, analyzer, anonymize)
-            for r in sorted(analyzer.reels, key=lambda x: x.taken_at, reverse=True)
+            self._format_reel_for_report(r, analyzer, anonymize) for r in sorted_reels
         ]
 
-    def _get_additional_content_data(self, analyzer: Any) -> dict[str, Any]:
+    def _get_additional_content_data(
+        self, analyzer: Any, max_items: Optional[int] = None
+    ) -> dict[str, Any]:
         """Get data for archived and recently deleted content with relative media paths."""
         # Archived posts
         archived_posts = []
-        for p in sorted(
+        sorted_archived = sorted(
             analyzer.archived_posts, key=lambda x: x.timestamp, reverse=True
-        ):
+        )
+        if max_items:
+            sorted_archived = sorted_archived[:max_items]
+        for p in sorted_archived:
             post_data = self._format_post_for_report(p, analyzer, False)
             # Make all media paths relative if present
             for media in post_data.get("media", []):
@@ -512,13 +550,16 @@ class HTMLExporter:
 
         # Recently deleted content
         recently_deleted = []
-        for item in sorted(
+        sorted_deleted = sorted(
             analyzer.recently_deleted, key=lambda x: x.timestamp, reverse=True
-        ):
+        )
+        if max_items:
+            sorted_deleted = sorted_deleted[:max_items]
+        for item in sorted_deleted:
             media_path = resolve_media_path(item.uri, analyzer.data_path)
             thumb = (
                 get_image_thumbnail(media_path, (100, 100))
-                if item.media_type == "IMAGE" and media_path
+                if item.media_type.value == "IMAGE" and media_path
                 else None
             )
             # Make uri and thumbnail always relative to output_dir
@@ -576,17 +617,19 @@ class HTMLExporter:
         return {"archived_posts": archived_posts, "recently_deleted": recently_deleted}
 
     def _get_story_interactions_data(
-        self, analyzer: Any, anonymize: bool
+        self, analyzer: Any, anonymize: bool, max_items: Optional[int] = None
     ) -> dict[str, Any]:
         """Get formatted story interactions data."""
         if not analyzer.story_interactions:
             return {"interactions": [], "summary": {}}
 
+        sorted_interactions = sorted(
+            analyzer.story_interactions, key=lambda x: x.timestamp, reverse=True
+        )
+        if max_items:
+            sorted_interactions = sorted_interactions[:max_items]
         interactions = [
-            self._format_interaction_for_report(i, anonymize)
-            for i in sorted(
-                analyzer.story_interactions, key=lambda x: x.timestamp, reverse=True
-            )
+            self._format_interaction_for_report(i, anonymize) for i in sorted_interactions
         ]
 
         summary = {
@@ -724,9 +767,7 @@ class HTMLExporter:
             "uri": getattr(post, "uri", ""),
             "shortcode": getattr(post, "shortcode", ""),
             "timestamp": (
-                post.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                if post.timestamp
-                else "N/A"
+                post.timestamp.strftime("%Y-%m-%d %H:%M:%S") if post.timestamp else "N/A"
             ),
             "likes": post.likes_count,
             "comments": post.comments_count,
@@ -738,9 +779,12 @@ class HTMLExporter:
             "media": [],
         }
 
-        # Add media info (limit to first 5 items for performance)
+        # Add media info (limit to first 3 items for compact mode, 5 for normal)
+        media_limit = (
+            3 if hasattr(analyzer, "_compact_mode") and analyzer._compact_mode else 5
+        )
         media_list = []
-        for media in post.media[:5]:
+        for media in post.media[:media_limit]:
             media_info = {
                 "uri": media.uri,
                 "type": media.media_type.value,
@@ -811,9 +855,7 @@ class HTMLExporter:
         """Format a single story for the report."""
         data = {
             "taken_at": (
-                story.taken_at.strftime("%Y-%m-%d %H:%M:%S")
-                if story.taken_at
-                else "N/A"
+                story.taken_at.strftime("%Y-%m-%d %H:%M:%S") if story.taken_at else "N/A"
             ),
             "caption": clean_instagram_text(story.caption) if story.caption else "",
             "media_uri": story.media.uri if story.media else "",

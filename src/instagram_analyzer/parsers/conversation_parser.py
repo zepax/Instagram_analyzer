@@ -143,7 +143,7 @@ class ConversationParser:
                 message = self._parse_single_message(msg_data, conversation_id)
                 if message:
                     messages.append(message)
-            except Exception as e:
+            except Exception:
                 # Skip invalid messages but continue processing
                 continue
 

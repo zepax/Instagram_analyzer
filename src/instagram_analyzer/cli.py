@@ -18,7 +18,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option(version="0.2.03")
+@click.version_option(version="0.2.05")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option(
     "--log-level",
@@ -49,10 +49,10 @@ def main(
     )
 
     logger = get_logger("cli")
-    logger.info(f"Starting Instagram Analyzer v0.2.03 with log level: {log_level}")
+    logger.info(f"Starting Instagram Analyzer v0.2.05 with log level: {log_level}")
 
     if verbose:
-        console.print("[bold blue]Instagram Analyzer v0.2.03[/bold blue]")
+        console.print("[bold blue]Instagram Analyzer v0.2.05[/bold blue]")
         console.print("Advanced Instagram data analysis tool\n")
 
 
@@ -73,6 +73,12 @@ def main(
 )
 @click.option("--include-media", is_flag=True, help="Include media analysis (slower)")
 @click.option("--anonymize", is_flag=True, help="Anonymize sensitive data in reports")
+@click.option(
+    "--compact", is_flag=True, help="Generate compact reports (smaller file size)"
+)
+@click.option(
+    "--max-items", type=int, default=100, help="Maximum items per section in compact mode"
+)
 @click.pass_context
 def analyze(
     ctx: click.Context,
@@ -81,6 +87,8 @@ def analyze(
     format: str,
     include_media: bool,
     anonymize: bool,
+    compact: bool,
+    max_items: int,
 ) -> None:
     """Analyze Instagram data export and generate comprehensive reports.
 
@@ -92,7 +100,11 @@ def analyze(
         console.print(f"[bold]Analyzing Instagram data at:[/bold] {data_path}")
         console.print(f"[bold]Output format:[/bold] {format}")
         console.print(f"[bold]Include media analysis:[/bold] {include_media}")
-        console.print(f"[bold]Anonymize data:[/bold] {anonymize}\n")
+        console.print(f"[bold]Anonymize data:[/bold] {anonymize}")
+        console.print(f"[bold]Compact mode:[/bold] {compact}")
+        if compact:
+            console.print(f"[bold]Max items per section:[/bold] {max_items}")
+        console.print()
 
     logger = get_logger("cli.analyze")
 
@@ -107,12 +119,8 @@ def analyze(
         logger.info(f"Starting analysis of data at: {data_path}")
 
         # Initialize analyzer with progress bars enabled
-        analyzer = InstagramAnalyzer(
-            data_path, 
-            enable_parallel=True,
-            show_progress=True
-        )
-        
+        analyzer = InstagramAnalyzer(data_path, enable_parallel=True, show_progress=True)
+
         console.print("[bold blue]Loading Instagram data...[/bold blue]")
         analyzer.load_data_parallel()
         console.print("[green]✓[/green] Data loaded successfully")
@@ -129,11 +137,21 @@ def analyze(
         output.mkdir(exist_ok=True)
 
         if format == "html":
-            report_path = analyzer.export_html(output, anonymize=anonymize, show_progress=True)
+            report_path = analyzer.export_html(
+                output,
+                anonymize=anonymize,
+                show_progress=True,
+                compact=compact,
+                max_items=max_items,
+            )
         elif format == "json":
-            report_path = analyzer.export_json(output, anonymize=anonymize, show_progress=True)
+            report_path = analyzer.export_json(
+                output, anonymize=anonymize, show_progress=True
+            )
         elif format == "pdf":
-            report_path = analyzer.export_pdf(output, anonymize=anonymize, show_progress=True)
+            report_path = analyzer.export_pdf(
+                output, anonymize=anonymize, show_progress=True
+            )
 
         console.print("[green]✓[/green] Report generation complete")
 

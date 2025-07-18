@@ -82,8 +82,8 @@ class InstagramAnalyzer:
     """Main analyzer class for Instagram data."""
 
     def __init__(
-        self, 
-        data_path: Path, 
+        self,
+        data_path: Path,
         lazy_loading: bool = True,
         enable_parallel: bool = True,
         max_workers: Optional[int] = None,
@@ -134,7 +134,7 @@ class InstagramAnalyzer:
         self.logger.info(
             f"Initializing InstagramAnalyzer with data path: {self.data_path}"
         )
-        
+
         # Setup Rich console and progress
         self.console = Console()
         self.progress = Progress(
@@ -163,7 +163,7 @@ class InstagramAnalyzer:
 
         # Data detection
         self.detector = DataDetector()
-        
+
         # Initialize parsers (parallel or standard)
         if enable_parallel:
             self.parser = ParallelJSONParser(
@@ -173,7 +173,7 @@ class InstagramAnalyzer:
             )
         else:
             self.parser = JSONParser()
-            
+
         self.engagement_parser = EngagementParser()
 
         # Validation
@@ -184,21 +184,24 @@ class InstagramAnalyzer:
 
     def load_data_parallel(self, batch_size: int = 1000) -> None:
         """Load and parse Instagram data using parallel processing.
-        
+
         Args:
             batch_size: Batch size for parallel processing
-            
+
         Raises:
             InvalidDataFormatError: If data structure is invalid
             DataNotFoundError: If required data files are missing
         """
         if not self.enable_parallel:
-            self.logger.warning("Parallel processing is disabled, falling back to standard loading")
+            self.logger.warning(
+                "Parallel processing is disabled, falling back to standard loading"
+            )
             return self.load_data()
-            
+
         with memory_profile("load_data_parallel") as profiler:
             with create_operation_logger(
-                "load_data_parallel", {"data_path": str(self.data_path), "batch_size": batch_size}
+                "load_data_parallel",
+                {"data_path": str(self.data_path), "batch_size": batch_size},
             ) as op_logger:
                 try:
                     # Detect data structure
@@ -240,16 +243,20 @@ class InstagramAnalyzer:
                         op_logger.progress("Validating data files...")
                         profiler.take_snapshot("validate_files")
                         self._validate_data_files(data_structure)
-                        
+
                         # Log that data is ready for lazy loading
-                        self.logger.info("Data structure validated, ready for lazy loading with parallel processing")
+                        self.logger.info(
+                            "Data structure validated, ready for lazy loading with parallel processing"
+                        )
                     else:
                         # Load all data immediately using parallel processing
                         op_logger.progress("Loading all data with parallel processing...")
                         profiler.take_snapshot("load_all_parallel")
                         self._load_all_data_parallel(data_structure, batch_size)
 
-                    op_logger.complete("Data loaded successfully with parallel processing")
+                    op_logger.complete(
+                        "Data loaded successfully with parallel processing"
+                    )
 
                 except Exception as e:
                     self.logger.error(f"Error loading data: {e}")
@@ -525,7 +532,7 @@ class InstagramAnalyzer:
                     self._stories_cache.extend(stories)
                 else:
                     self._stories_list.extend(stories)
-            except Exception as e:
+            except Exception:
 
                 import traceback
 
@@ -579,7 +586,7 @@ class InstagramAnalyzer:
 
     def _load_all_data_parallel(self, structure: dict[str, Any], batch_size: int) -> None:
         """Load all data using parallel processing for improved performance.
-        
+
         Args:
             structure: Detected data structure
             batch_size: Batch size for parallel processing
@@ -587,7 +594,9 @@ class InstagramAnalyzer:
         try:
             # Load posts in parallel
             if structure.get("posts"):
-                self.logger.info(f"Loading {len(structure['posts'])} post files in parallel...")
+                self.logger.info(
+                    f"Loading {len(structure['posts'])} post files in parallel..."
+                )
                 self._posts_list = []
                 for file_path in structure["posts"]:
                     try:
@@ -598,12 +607,16 @@ class InstagramAnalyzer:
                     except Exception as e:
                         self.logger.error(f"Error loading posts from {file_path}: {e}")
                         continue
-                        
-                self.logger.info(f"Loaded {len(self._posts_list)} posts using parallel processing")
-            
+
+                self.logger.info(
+                    f"Loaded {len(self._posts_list)} posts using parallel processing"
+                )
+
             # Load stories in parallel
             if structure.get("stories"):
-                self.logger.info(f"Loading {len(structure['stories'])} story files in parallel...")
+                self.logger.info(
+                    f"Loading {len(structure['stories'])} story files in parallel..."
+                )
                 self._stories_list = []
                 for file_path in structure["stories"]:
                     try:
@@ -614,12 +627,16 @@ class InstagramAnalyzer:
                     except Exception as e:
                         self.logger.error(f"Error loading stories from {file_path}: {e}")
                         continue
-                        
-                self.logger.info(f"Loaded {len(self._stories_list)} stories using parallel processing")
-            
+
+                self.logger.info(
+                    f"Loaded {len(self._stories_list)} stories using parallel processing"
+                )
+
             # Load reels in parallel
             if structure.get("reels"):
-                self.logger.info(f"Loading {len(structure['reels'])} reel files in parallel...")
+                self.logger.info(
+                    f"Loading {len(structure['reels'])} reel files in parallel..."
+                )
                 self._reels_list = []
                 for file_path in structure["reels"]:
                     try:
@@ -630,12 +647,16 @@ class InstagramAnalyzer:
                     except Exception as e:
                         self.logger.error(f"Error loading reels from {file_path}: {e}")
                         continue
-                        
-                self.logger.info(f"Loaded {len(self._reels_list)} reels using parallel processing")
-            
+
+                self.logger.info(
+                    f"Loaded {len(self._reels_list)} reels using parallel processing"
+                )
+
             # Load archived posts in parallel
             if structure.get("archived_posts"):
-                self.logger.info(f"Loading {len(structure['archived_posts'])} archived post files in parallel...")
+                self.logger.info(
+                    f"Loading {len(structure['archived_posts'])} archived post files in parallel..."
+                )
                 self._archived_posts_list = []
                 for file_path in structure["archived_posts"]:
                     try:
@@ -644,14 +665,20 @@ class InstagramAnalyzer:
                             archived_posts = self.parser.parse_archived_posts(data)
                             self._archived_posts_list.extend(archived_posts)
                     except Exception as e:
-                        self.logger.error(f"Error loading archived posts from {file_path}: {e}")
+                        self.logger.error(
+                            f"Error loading archived posts from {file_path}: {e}"
+                        )
                         continue
-                        
-                self.logger.info(f"Loaded {len(self._archived_posts_list)} archived posts using parallel processing")
-            
+
+                self.logger.info(
+                    f"Loaded {len(self._archived_posts_list)} archived posts using parallel processing"
+                )
+
             # Load recently deleted media in parallel
             if structure.get("recently_deleted"):
-                self.logger.info(f"Loading {len(structure['recently_deleted'])} recently deleted files in parallel...")
+                self.logger.info(
+                    f"Loading {len(structure['recently_deleted'])} recently deleted files in parallel..."
+                )
                 self._recently_deleted_list = []
                 for file_path in structure["recently_deleted"]:
                     try:
@@ -660,30 +687,42 @@ class InstagramAnalyzer:
                             deleted_media = self.parser.parse_recently_deleted(data)
                             self._recently_deleted_list.extend(deleted_media)
                     except Exception as e:
-                        self.logger.error(f"Error loading recently deleted from {file_path}: {e}")
+                        self.logger.error(
+                            f"Error loading recently deleted from {file_path}: {e}"
+                        )
                         continue
-                        
-                self.logger.info(f"Loaded {len(self._recently_deleted_list)} recently deleted items using parallel processing")
-            
+
+                self.logger.info(
+                    f"Loaded {len(self._recently_deleted_list)} recently deleted items using parallel processing"
+                )
+
             # Load story interactions in parallel
             if structure.get("story_interaction_files"):
                 self.logger.info("Loading story interactions in parallel...")
                 self._story_interactions_list = []
-                for interaction_type, files in structure["story_interaction_files"].items():
+                for interaction_type, files in structure[
+                    "story_interaction_files"
+                ].items():
                     for file_path in files:
                         try:
                             data = safe_json_load(file_path)
                             if data:
-                                interactions = self.parser.parse_story_interactions(data, interaction_type)
+                                interactions = self.parser.parse_story_interactions(
+                                    data, interaction_type
+                                )
                                 self._story_interactions_list.extend(interactions)
                         except Exception as e:
-                            self.logger.error(f"Error loading story interactions from {file_path}: {e}")
+                            self.logger.error(
+                                f"Error loading story interactions from {file_path}: {e}"
+                            )
                             continue
-                            
-                self.logger.info(f"Loaded {len(self._story_interactions_list)} story interactions using parallel processing")
-            
+
+                self.logger.info(
+                    f"Loaded {len(self._story_interactions_list)} story interactions using parallel processing"
+                )
+
             # Enrich posts with engagement data if available
-            if self._engagement_data and hasattr(self, '_posts_list'):
+            if self._engagement_data and hasattr(self, "_posts_list"):
                 self.logger.info("Enriching posts with engagement data...")
                 try:
                     self._posts_list = self.parser.enrich_posts_with_engagement(
@@ -692,54 +731,65 @@ class InstagramAnalyzer:
                     self.logger.info("Successfully enriched posts with engagement data")
                 except Exception as e:
                     self.logger.error(f"Error enriching posts with engagement data: {e}")
-            
+
             # Force garbage collection after loading all data
             force_gc_if_needed()
-            
+
         except Exception as e:
             self.logger.error(f"Error in parallel data loading: {e}", exc_info=True)
             raise
 
     def _validate_data_files(self, structure: dict[str, Any]) -> None:
         """Validate that data files exist and are accessible.
-        
+
         Args:
             structure: Detected data structure
-            
+
         Raises:
             DataNotFoundError: If critical data files are missing
         """
         missing_files = []
-        
+
         # Check profile files
         profile_files = structure.get("profile_files", [])
         for file_path in profile_files:
             if not Path(file_path).exists():
                 missing_files.append(str(file_path))
-        
+
         # Check content files
-        for content_type in ["posts", "stories", "reels", "archived_posts", "recently_deleted"]:
+        for content_type in [
+            "posts",
+            "stories",
+            "reels",
+            "archived_posts",
+            "recently_deleted",
+        ]:
             files = structure.get(content_type, [])
             for file_path in files:
                 if not Path(file_path).exists():
                     missing_files.append(str(file_path))
-        
+
         # Check story interaction files
         interaction_files = structure.get("story_interaction_files", {})
         for interaction_type, files in interaction_files.items():
             for file_path in files:
                 if not Path(file_path).exists():
                     missing_files.append(str(file_path))
-        
+
         if missing_files:
             error_msg = f"Missing {len(missing_files)} data files"
-            self.logger.error(error_msg, extra={"missing_files": missing_files[:10]})  # Log first 10
+            self.logger.error(
+                error_msg, extra={"missing_files": missing_files[:10]}
+            )  # Log first 10
             raise DataNotFoundError(
-                str(self.data_path), 
-                f"{error_msg}: {', '.join(missing_files[:5])}" + ("..." if len(missing_files) > 5 else "")
+                str(self.data_path),
+                f"{error_msg}: {', '.join(missing_files[:5])}"
+                + ("..." if len(missing_files) > 5 else ""),
             )
-        
-        self.logger.info(f"All data files validated successfully ({structure.get('total_files', 0)} files)")
+
+        self.logger.info(
+            f"All data files validated successfully ({structure.get('total_files', 0)} files)"
+        )
 
     def _count_content_files(self, structure: dict[str, Any], content_type: str) -> int:
         """Count items in content files without loading them."""
@@ -802,10 +852,14 @@ class InstagramAnalyzer:
                 self.logger.info("Auto-detecting data structure for lazy loading...")
                 self._data_structure = self.detector.detect_structure(self.data_path)
                 if not self._data_structure["is_valid"]:
-                    self.logger.warning(f"Invalid data structure detected: {self._data_structure}")
+                    self.logger.warning(
+                        f"Invalid data structure detected: {self._data_structure}"
+                    )
                     self._data_structure = None
                 else:
-                    self.logger.info(f"Auto-detected {self._data_structure['export_type']} export with {self._data_structure['total_files']} files")
+                    self.logger.info(
+                        f"Auto-detected {self._data_structure['export_type']} export with {self._data_structure['total_files']} files"
+                    )
             except Exception as e:
                 self.logger.error(f"Failed to auto-detect data structure: {e}")
                 self._data_structure = None
@@ -862,7 +916,9 @@ class InstagramAnalyzer:
         # Enrich posts with engagement data
         if self._engagement_data:
             try:
-                posts = self.parser.enrich_posts_with_engagement(posts, self._engagement_data)
+                posts = self.parser.enrich_posts_with_engagement(
+                    posts, self._engagement_data
+                )
             except Exception as e:
                 self.logger.warning(f"Could not enrich posts with engagement data: {e}")
 
@@ -1048,7 +1104,9 @@ class InstagramAnalyzer:
             gc.collect()
             self.logger.info("Memory cache cleared")
 
-    def analyze(self, include_media: bool = False, show_progress: bool = True) -> dict[str, Any]:
+    def analyze(
+        self, include_media: bool = False, show_progress: bool = True
+    ) -> dict[str, Any]:
         """Run comprehensive analysis on loaded data.
 
         Args:
@@ -1063,10 +1121,14 @@ class InstagramAnalyzer:
         if show_progress:
             with self.progress:
                 # Create main analysis task
-                main_task = self.progress.add_task("Running comprehensive analysis", total=3)
-                
+                main_task = self.progress.add_task(
+                    "Running comprehensive analysis", total=3
+                )
+
                 # Basic statistics
-                self.progress.update(main_task, description="Analyzing basic statistics...")
+                self.progress.update(
+                    main_task, description="Analyzing basic statistics..."
+                )
                 basic_stats = self.basic_stats.analyze(
                     posts=self.posts,
                     stories=self.stories,
@@ -1080,7 +1142,9 @@ class InstagramAnalyzer:
                 self.progress.update(main_task, advance=1)
 
                 # Temporal analysis
-                self.progress.update(main_task, description="Analyzing temporal patterns...")
+                self.progress.update(
+                    main_task, description="Analyzing temporal patterns..."
+                )
                 temporal_stats = self.temporal_analyzer.analyze(
                     posts=self.posts, stories=self.stories, reels=self.reels
                 )
@@ -1089,10 +1153,12 @@ class InstagramAnalyzer:
 
                 # Media analysis if requested
                 if include_media:
-                    self.progress.update(main_task, description="Analyzing media content...")
+                    self.progress.update(
+                        main_task, description="Analyzing media content..."
+                    )
                     # Add media analysis here if needed
                     pass
-                
+
                 self.progress.update(main_task, advance=1)
                 self.progress.update(main_task, description="Analysis complete!")
         else:
@@ -1144,21 +1210,27 @@ class InstagramAnalyzer:
                     total_tasks += 1
                 if include_engagement_prediction:
                     total_tasks += 1
-                
+
                 ml_task = self.progress.add_task("Running ML analysis", total=total_tasks)
-                
+
                 try:
                     # Sentiment Analysis
                     if include_sentiment:
-                        self.progress.update(ml_task, description="Analyzing sentiment...")
+                        self.progress.update(
+                            ml_task, description="Analyzing sentiment..."
+                        )
                         sentiment_results = self._run_sentiment_analysis_with_progress()
                         results.update(sentiment_results)
                         self.progress.update(ml_task, advance=1)
 
                     # Engagement Prediction
                     if include_engagement_prediction:
-                        self.progress.update(ml_task, description="Predicting engagement...")
-                        engagement_results = self._run_engagement_prediction_with_progress()
+                        self.progress.update(
+                            ml_task, description="Predicting engagement..."
+                        )
+                        engagement_results = (
+                            self._run_engagement_prediction_with_progress()
+                        )
                         results.update(engagement_results)
                         self.progress.update(ml_task, advance=1)
 
@@ -1167,7 +1239,7 @@ class InstagramAnalyzer:
                     feature_results = self._extract_ml_features()
                     results.update(feature_results)
                     self.progress.update(ml_task, advance=1)
-                    
+
                     self.progress.update(ml_task, description="ML analysis complete!")
 
                 except Exception as e:
@@ -1300,15 +1372,15 @@ class InstagramAnalyzer:
                 # Process posts in batches with progress
                 batch_size = 100
                 post_sentiments = []
-                
+
                 for i in range(0, len(post_texts), batch_size):
-                    batch = post_texts[i:i + batch_size]
+                    batch = post_texts[i : i + batch_size]
                     batch_sentiments = self.sentiment_analyzer.predict(batch)
                     if isinstance(batch_sentiments, list):
                         post_sentiments.extend(batch_sentiments)
                     else:
                         post_sentiments.append(batch_sentiments)
-                
+
                 sentiment_results["sentiment_analysis"]["posts"] = post_sentiments
                 all_sentiments.extend(post_sentiments)
 
@@ -1340,7 +1412,11 @@ class InstagramAnalyzer:
             sentiment_results["sentiment_analysis"]["overall_sentiment"] = {
                 "avg_polarity": avg_polarity,
                 "avg_subjectivity": avg_subjectivity,
-                "dominant_emotion": "positive" if positive_count > negative_count else "negative" if negative_count > positive_count else "neutral",
+                "dominant_emotion": (
+                    "positive"
+                    if positive_count > negative_count
+                    else "negative" if negative_count > positive_count else "neutral"
+                ),
                 "sentiment_distribution": {
                     "positive": positive_count,
                     "negative": negative_count,
@@ -1457,13 +1533,15 @@ class InstagramAnalyzer:
                 # Make predictions on all posts in batches
                 batch_size = 50
                 all_predictions = []
-                
+
                 for i in range(0, len(self.posts), batch_size):
-                    batch = self.posts[i:i + batch_size]
+                    batch = self.posts[i : i + batch_size]
                     batch_predictions = self.engagement_predictor.predict(batch)
                     all_predictions.extend(batch_predictions)
-                
-                engagement_results["engagement_prediction"]["predictions"] = all_predictions
+
+                engagement_results["engagement_prediction"][
+                    "predictions"
+                ] = all_predictions
 
                 # Get feature importance
                 for metric in ["likes", "comments"]:
@@ -1658,13 +1736,22 @@ class InstagramAnalyzer:
 
         return info
 
-    def export_html(self, output_path: Path, anonymize: bool = False, show_progress: bool = True) -> Path:
+    def export_html(
+        self,
+        output_path: Path,
+        anonymize: bool = False,
+        show_progress: bool = True,
+        compact: bool = False,
+        max_items: int = 100,
+    ) -> Path:
         """Export analysis results as HTML report.
 
         Args:
             output_path: Output directory path
             anonymize: Whether to anonymize sensitive data
             show_progress: Whether to show progress bars
+            compact: Whether to generate compact report (smaller file size)
+            max_items: Maximum number of items per section in compact mode
 
         Returns:
             Path to generated HTML file
@@ -1677,22 +1764,35 @@ class InstagramAnalyzer:
         if show_progress:
             with self.progress:
                 export_task = self.progress.add_task("Exporting HTML report", total=100)
-                
-                self.progress.update(export_task, description="Initializing HTML exporter...")
+
+                self.progress.update(
+                    export_task, description="Initializing HTML exporter..."
+                )
                 exporter = HTMLExporter()
                 self.progress.update(export_task, advance=10)
-                
+
                 self.progress.update(export_task, description="Generating HTML report...")
-                result = exporter.export(self, output_path, anonymize, show_progress=False)
+                result = exporter.export(
+                    self,
+                    output_path,
+                    anonymize,
+                    show_progress=False,
+                    compact=compact,
+                    max_items=max_items,
+                )
                 self.progress.update(export_task, advance=90)
-                
+
                 self.progress.update(export_task, description="HTML export complete!")
                 return result
         else:
             exporter = HTMLExporter()
-            return exporter.export(self, output_path, anonymize)
+            return exporter.export(
+                self, output_path, anonymize, compact=compact, max_items=max_items
+            )
 
-    def export_json(self, output_path: Path, anonymize: bool = False, show_progress: bool = True) -> Path:
+    def export_json(
+        self, output_path: Path, anonymize: bool = False, show_progress: bool = True
+    ) -> Path:
         """Export analysis results as JSON.
 
         Args:
@@ -1709,7 +1809,7 @@ class InstagramAnalyzer:
         if show_progress:
             with self.progress:
                 export_task = self.progress.add_task("Exporting JSON report", total=100)
-                
+
                 self.progress.update(export_task, description="Running analysis...")
                 results = self.analyze(show_progress=False)
                 self.progress.update(export_task, advance=50)
@@ -1724,7 +1824,7 @@ class InstagramAnalyzer:
                 with open(json_file, "w", encoding="utf-8") as f:
                     json.dump(results, f, indent=2, default=str)
                 self.progress.update(export_task, advance=30)
-                
+
                 self.progress.update(export_task, description="JSON export complete!")
                 return json_file
         else:
@@ -1739,7 +1839,9 @@ class InstagramAnalyzer:
 
             return json_file
 
-    def export_pdf(self, output_path: Path, anonymize: bool = False, show_progress: bool = True) -> Path:
+    def export_pdf(
+        self, output_path: Path, anonymize: bool = False, show_progress: bool = True
+    ) -> Path:
         """Export analysis results as PDF report.
 
         Args:
@@ -1758,15 +1860,17 @@ class InstagramAnalyzer:
         if show_progress:
             with self.progress:
                 export_task = self.progress.add_task("Exporting PDF report", total=100)
-                
-                self.progress.update(export_task, description="Initializing PDF exporter...")
+
+                self.progress.update(
+                    export_task, description="Initializing PDF exporter..."
+                )
                 exporter = PDFExporter()
                 self.progress.update(export_task, advance=10)
-                
+
                 self.progress.update(export_task, description="Generating PDF report...")
                 result = exporter.export(self, output_path, anonymize)
                 self.progress.update(export_task, advance=90)
-                
+
                 self.progress.update(export_task, description="PDF export complete!")
                 return result
         else:

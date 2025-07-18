@@ -131,7 +131,7 @@ class PDFExporter:
     def _generate_report_data(self, analyzer, anonymize: bool) -> dict[str, Any]:
         """Generate comprehensive report data."""
         # Run analysis
-        analysis_results = analyzer.analyze()
+        _ = analyzer.analyze()
 
         data = {
             "metadata": self._get_metadata(analyzer, anonymize),
@@ -595,7 +595,7 @@ class PDFExporter:
             total_hashtags = content_analysis.get("total_hashtags", 0)
             unique_hashtags = content_analysis.get("unique_hashtags", 0)
 
-            content.append(Paragraph(f"<b>Hashtag Usage:</b>", self.styles["Normal"]))
+            content.append(Paragraph("<b>Hashtag Usage:</b>", self.styles["Normal"]))
             content.append(
                 Paragraph(
                     f"• Total hashtags used: {total_hashtags}", self.styles["StatStyle"]
