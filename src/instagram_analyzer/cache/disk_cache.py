@@ -5,7 +5,6 @@ and efficient cleanup for large datasets.
 """
 
 import hashlib
-import json
 import pickle
 import shutil
 import sqlite3
@@ -14,7 +13,7 @@ import threading
 import time
 import zlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, Optional, Set
 
 from ..logging_config import get_logger
 from ..utils.retry_utils import safe_file_operation
@@ -42,7 +41,10 @@ class DiskCache:
             config: Cache configuration object
         """
         self.config = config
-        self.cache_dir = config.disk_cache_dir
+        # Ensure cache_dir is not None
+        self.cache_dir = (
+            config.disk_cache_dir if config.disk_cache_dir else Path("./cache")
+        )
         self.data_dir = self.cache_dir / "data"
         self.db_path = self.cache_dir / "cache.db"
 
@@ -84,10 +86,10 @@ class DiskCache:
             # Load current stats
             self._update_stats()
 
-            logger.info(f"Disk cache initialized at {self.cache_dir}")
+            logger.info("Disk cache initialized at %s", self.cache_dir)
 
         except Exception as e:
-            logger.error(f"Failed to initialize disk cache: {e}")
+            logger.error("Failed to initialize disk cache: %s", e)
             raise
 
     def _init_database(self) -> None:
@@ -171,13 +173,13 @@ class DiskCache:
                 return data
 
             except Exception as e:
-                logger.error(f"Failed to load cached data for key {key}: {e}")
+                logger.error("Failed to load cached data for key %s: %s", key, e)
                 # Remove corrupted entry
                 self._remove_entry(key, entry_info["filename"])
                 self._stats["misses"] += 1
                 return default
 
-    def set(
+    def store(
         self,
         key: str,
         value: Any,
@@ -197,7 +199,7 @@ class DiskCache:
         """
         if len(key) > self.config.max_key_length:
             logger.warning(
-                f"Cache key too long: {len(key)} > {self.config.max_key_length}"
+                "Cache key too long: %d > %d", len(key), self.config.max_key_length
             )
             return False
 
@@ -277,8 +279,11 @@ class DiskCache:
                 return True
 
             except Exception as e:
-                logger.error(f"Failed to cache data for key {key}: {e}")
+                logger.error("Failed to cache data for key %s: %s", key, e)
                 return False
+
+    # Alias for backward compatibility
+    set = store
 
     def delete(self, key: str) -> bool:
         """Delete entry from disk cache.
@@ -326,7 +331,7 @@ class DiskCache:
                 logger.info("Disk cache cleared")
 
             except Exception as e:
-                logger.error(f"Failed to clear disk cache: {e}")
+                logger.error("Failed to clear disk cache: %s", e)
 
     def exists(self, key: str) -> bool:
         """Check if key exists in cache.
@@ -347,7 +352,7 @@ class DiskCache:
 
         return True
 
-    def keys(self) -> set[str]:
+    def get_keys(self) -> Set[str]:
         """Get all non-expired cache keys.
 
         Returns:
@@ -365,6 +370,9 @@ class DiskCache:
                 finally:
                     conn.close()
 
+    # Alias for backward compatibility
+    keys = property(get_keys)
+
     def size(self) -> int:
         """Get current cache size in bytes.
 
@@ -381,7 +389,7 @@ class DiskCache:
         """
         return self._stats["entry_count"]
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -391,19 +399,24 @@ class DiskCache:
             hit_rate = 0.0
             total_requests = self._stats["hits"] + self._stats["misses"]
             if total_requests > 0:
-                hit_rate = self._stats["hits"] / total_requests
+                hit_rate = float(self._stats["hits"]) / float(total_requests)
+
+            disk_limit = (
+                float(self.config.disk_limit) if self.config.disk_limit else 1.0
+            )
 
             return {
                 **self._stats,
                 "hit_rate": hit_rate,
-                "disk_usage_pct": (self._stats["size_bytes"] / self.config.disk_limit)
-                * 100,
-                "avg_entry_size": self._stats["size_bytes"]
-                / max(1, self._stats["entry_count"]),
+                "disk_usage_pct": (float(self._stats["size_bytes"]) / disk_limit) * 100,
+                "avg_entry_size": (
+                    float(self._stats["size_bytes"])
+                    / float(max(1, self._stats["entry_count"]))
+                ),
                 "cache_dir": str(self.cache_dir),
             }
 
-    def _get_entry_info(self, key: str) -> Optional[dict[str, Any]]:
+    def _get_entry_info(self, key: str) -> Optional[Dict[str, Any]]:
         """Get entry information from database."""
         with self._db_lock:
             conn = sqlite3.connect(str(self.db_path))
@@ -433,7 +446,7 @@ class DiskCache:
             finally:
                 conn.close()
 
-    def _is_expired(self, entry_info: dict[str, Any]) -> bool:
+    def _is_expired(self, entry_info: Dict[str, Any]) -> bool:
         """Check if entry has expired."""
         if entry_info["ttl"] is None:
             return False
@@ -460,6 +473,7 @@ class DiskCache:
     @safe_file_operation("atomic write")
     def _write_data_atomic(self, file_path: Path, data: bytes) -> bool:
         """Write data atomically using temporary file."""
+        tmp_path = None
         try:
             # Write to temporary file first
             with tempfile.NamedTemporaryFile(
@@ -473,9 +487,9 @@ class DiskCache:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to write cache file {file_path}: {e}")
+            logger.error("Failed to write cache file %s: %s", file_path, e)
             # Clean up temporary file if it exists
-            if "tmp_path" in locals() and tmp_path.exists():
+            if tmp_path is not None and tmp_path.exists():
                 tmp_path.unlink(missing_ok=True)
             return False
 
@@ -514,7 +528,7 @@ class DiskCache:
                     conn.close()
 
         except Exception as e:
-            logger.error(f"Failed to remove cache entry {key}: {e}")
+            logger.error("Failed to remove cache entry %s: %s", key, e)
 
     def _check_disk_space(self, required_bytes: int) -> bool:
         """Check if there's enough disk space."""
@@ -592,7 +606,7 @@ class DiskCache:
                 conn.close()
 
         if removed_count > 0:
-            logger.debug(f"Cleaned up {removed_count} expired disk cache entries")
+            logger.debug("Cleaned up %d expired disk cache entries", removed_count)
 
         return removed_count
 
@@ -603,7 +617,7 @@ class DiskCache:
             try:
                 cursor = conn.execute("SELECT SUM(size_bytes) FROM cache_entries")
                 result = cursor.fetchone()[0]
-                return result if result is not None else 0
+                return int(result) if result is not None else 0
             finally:
                 conn.close()
 
@@ -621,9 +635,11 @@ class DiskCache:
                 )
                 row = cursor.fetchone()
 
-                self._stats["entry_count"] = row[0] if row[0] is not None else 0
-                self._stats["size_bytes"] = row[1] if row[1] is not None else 0
-                self._stats["compression_ratio"] = row[2] if row[2] is not None else 1.0
+                self._stats["entry_count"] = int(row[0]) if row[0] is not None else 0
+                self._stats["size_bytes"] = int(row[1]) if row[1] is not None else 0
+                self._stats["compression_ratio"] = (
+                    float(row[2]) if row[2] is not None else 1.0
+                )
 
             finally:
                 conn.close()
@@ -642,4 +658,4 @@ class DiskCache:
                     self._update_stats()
 
             except Exception as e:
-                logger.error(f"Error in disk cache cleanup thread: {e}")
+                logger.error("Error in disk cache cleanup thread: %s", e)

@@ -42,7 +42,7 @@ def cached(
     key_prefix: Optional[str] = None,
     include_args: bool = True,
     include_kwargs: bool = True,
-    exclude_args: Optional[list[str]] = None,
+    exclude_args: Optional[List[str]] = None,
     memory_only: bool = False,
     disk_only: bool = False,
     force_compression: bool = False,
@@ -269,7 +269,7 @@ def cache_clear(cache_manager: Optional[CacheManager] = None) -> None:
     cache_mgr.clear()
 
 
-def cache_stats(cache_manager: Optional[CacheManager] = None) -> dict[str, Any]:
+def cache_stats(cache_manager: Optional[CacheManager] = None) -> Dict[str, Any]:
     """Get cache statistics.
 
     Args:
@@ -285,7 +285,7 @@ def cache_stats(cache_manager: Optional[CacheManager] = None) -> dict[str, Any]:
 def _generate_function_cache_key(
     func: Callable,
     args: tuple,
-    kwargs: dict[str, Any],
+    kwargs: Dict[str, Any],
     key_prefix: Optional[str],
     include_args: bool,
     include_kwargs: bool,
@@ -375,7 +375,7 @@ def _clear_function_cache(
 
 def _get_function_cache_info(
     func: Callable, cache_manager: CacheManager, key_prefix: Optional[str]
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Get cache information for a specific function."""
     pattern = f"{key_prefix or ''}*{func.__module__}.{func.__qualname__}*"
     all_keys = cache_manager.keys()
@@ -394,7 +394,7 @@ def _invalidate_function_cache(
     func: Callable,
     cache_manager: CacheManager,
     args: tuple,
-    kwargs: dict[str, Any],
+    kwargs: Dict[str, Any],
     key_prefix: Optional[str],
     include_args: bool,
     include_kwargs: bool,

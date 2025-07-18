@@ -18,7 +18,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option(version="0.2.0")
+@click.version_option(version="0.2.03")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option(
     "--log-level",
@@ -49,10 +49,10 @@ def main(
     )
 
     logger = get_logger("cli")
-    logger.info(f"Starting Instagram Analyzer v0.2.0 with log level: {log_level}")
+    logger.info(f"Starting Instagram Analyzer v0.2.03 with log level: {log_level}")
 
     if verbose:
-        console.print("[bold blue]Instagram Analyzer v0.2.0[/bold blue]")
+        console.print("[bold blue]Instagram Analyzer v0.2.03[/bold blue]")
         console.print("Advanced Instagram data analysis tool\n")
 
 
@@ -106,37 +106,36 @@ def analyze(
 
         logger.info(f"Starting analysis of data at: {data_path}")
 
-        # Initialize analyzer
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            # Load data
-            task = progress.add_task("Loading Instagram data...", total=None)
-            analyzer = InstagramAnalyzer(data_path)
-            analyzer.load_data()
-            progress.update(task, description="Data loaded successfully")
+        # Initialize analyzer with progress bars enabled
+        analyzer = InstagramAnalyzer(
+            data_path, 
+            enable_parallel=True,
+            show_progress=True
+        )
+        
+        console.print("[bold blue]Loading Instagram data...[/bold blue]")
+        analyzer.load_data_parallel()
+        console.print("[green]✓[/green] Data loaded successfully")
 
-            # Run analysis
-            progress.update(task, description="Running analysis...")
-            results = analyzer.analyze(include_media=include_media)
+        console.print("[bold blue]Running comprehensive analysis...[/bold blue]")
+        results = analyzer.analyze(include_media=include_media, show_progress=True)
+        console.print("[green]✓[/green] Analysis complete")
 
-            # Generate report
-            progress.update(task, description="Generating report...")
-            if output is None:
-                output = Path.cwd() / "instagram_analysis"
+        # Generate report
+        console.print("[bold blue]Generating report...[/bold blue]")
+        if output is None:
+            output = Path.cwd() / "instagram_analysis"
 
-            output.mkdir(exist_ok=True)
+        output.mkdir(exist_ok=True)
 
-            if format == "html":
-                report_path = analyzer.export_html(output, anonymize=anonymize)
-            elif format == "json":
-                report_path = analyzer.export_json(output, anonymize=anonymize)
-            elif format == "pdf":
-                report_path = analyzer.export_pdf(output, anonymize=anonymize)
+        if format == "html":
+            report_path = analyzer.export_html(output, anonymize=anonymize, show_progress=True)
+        elif format == "json":
+            report_path = analyzer.export_json(output, anonymize=anonymize, show_progress=True)
+        elif format == "pdf":
+            report_path = analyzer.export_pdf(output, anonymize=anonymize, show_progress=True)
 
-            progress.update(task, description="Analysis complete!")
+        console.print("[green]✓[/green] Report generation complete")
 
         # Display results summary
         _display_summary(results)

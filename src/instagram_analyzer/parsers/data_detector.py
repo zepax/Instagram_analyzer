@@ -125,7 +125,9 @@ class DataDetector:
 
         # --- Profile Information ---
         if path_parts == ["personal_information", "personal_information.json"]:
-
+            structure["profile_files"].append(file_path)
+            return
+        elif path_parts == ["personal_information", "personal_information", "personal_information.json"]:
             structure["profile_files"].append(file_path)
             return
 

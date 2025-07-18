@@ -78,7 +78,7 @@ class MemoryCache(Generic[T]):
         }
 
         # Weak references for memory management
-        self._weak_refs: dict[str, weakref.ref] = {}
+        self._weak_refs: Dict[str, weakref.ref] = {}
 
         # Start cleanup thread if enabled
         if config.cleanup_interval > 0:
@@ -238,7 +238,7 @@ class MemoryCache(Generic[T]):
 
             return True
 
-    def keys(self) -> set[str]:
+    def keys(self) -> Set[str]:
         """Get all non-expired cache keys.
 
         Returns:
@@ -265,7 +265,7 @@ class MemoryCache(Generic[T]):
         """
         return len(self._data)
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics.
 
         Returns:

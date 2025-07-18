@@ -919,6 +919,10 @@
         }
 
         // Render posts gallery
+        let postsPage = 0;
+        const POSTS_PER_PAGE = 10;
+        const INITIAL_POSTS = 5;
+
         function renderPosts() {
             const container = document.getElementById('posts-gallery');
 
@@ -927,9 +931,15 @@
                 return;
             }
 
+            // Determine how many posts to show
+            let showCount = INITIAL_POSTS + postsPage * POSTS_PER_PAGE;
+            if (showCount > posts.length) showCount = posts.length;
+
+            const visiblePosts = posts.slice(0, showCount);
+
             container.innerHTML = `
                 <div class="posts-grid">
-                    ${posts.map(post => `
+                    ${visiblePosts.map(post => `
                         <div class="post-card">
                             <div class="post-header">
                                 <small>${post.date}</small>
@@ -967,10 +977,24 @@
                         </div>
                     `).join('')}
                 </div>
+                ${showCount < posts.length ? `<button id="loadMorePosts" class="load-more-btn">Cargar 10 más</button>` : ''}
             `;
+
+            // Add event listener for the button
+            const loadMoreBtn = document.getElementById('loadMorePosts');
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', function () {
+                    postsPage += 1;
+                    renderPosts();
+                });
+            }
         }
 
         // Render stories gallery
+        let storiesPage = 0;
+        const STORIES_PER_PAGE = 10;
+        const INITIAL_STORIES = 5;
+
         function renderStories() {
             const container = document.getElementById('stories-gallery');
 
@@ -979,10 +1003,16 @@
                 return;
             }
 
+            // Determine how many stories to show
+            let showCount = INITIAL_STORIES + storiesPage * STORIES_PER_PAGE;
+            if (showCount > stories.length) showCount = stories.length;
+
+            const visibleStories = stories.slice(0, showCount);
+
             container.innerHTML = `
                 <div class="media-grid">
-                    ${stories.map(story => `
-                        <div class="media-item">
+                    ${visibleStories.map((story, idx) => `
+                        <div class="media-item" data-story-idx="${idx}">
                             ${story.thumbnail ?
                     `<img src="${story.thumbnail}" class="media-thumbnail" alt="Story media" title="Story - ${story.taken_at}">
                                 <div class="media-overlay">
@@ -990,12 +1020,94 @@
                                     <div>${story.taken_at}</div>
                                     ${story.caption ? `<div>${story.caption.substring(0, 30)}...</div>` : ''}
                                 </div>` :
-                    `<div class="media-placeholder" title="${story.media_type} - Story">${story.media_type.toUpperCase()}</div>`
+                    (story.media_type && story.media_type.toLowerCase() === 'video' ?
+                        `<div class="media-placeholder" title="Video Story"><span style='font-size:2em;'>🎬</span></div>` :
+                        `<div class="media-placeholder" title="${story.media_type} - Story">${story.media_type ? story.media_type.toUpperCase() : 'STORY'}</div>`
+                    )
                 }
                         </div>
                     `).join('')}
                 </div>
+                ${showCount < stories.length ? `<button id="loadMoreStories" class="load-more-btn">Cargar 10 más</button>` : ''}
             `;
+
+            // Add event listener for the button
+            const loadMoreBtn = document.getElementById('loadMoreStories');
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', function () {
+                    storiesPage += 1;
+                    renderStories();
+                });
+            }
+
+            // Add click event to open modal with video (on demand)
+            const storyItems = container.querySelectorAll('.media-item');
+            storyItems.forEach((item, idx) => {
+                item.addEventListener('click', function () {
+                    const story = visibleStories[idx];
+                    if (story.media_type && story.media_type.toLowerCase() === 'video' && story.media_uri) {
+                        openStoryVideoModal(story.media_uri, story.taken_at, story.caption);
+                    } else if (story.thumbnail) {
+                        openImageModalFromSrc(story.thumbnail, story.taken_at);
+                    }
+                });
+            });
+        }
+
+        // Modal for story video
+        function openStoryVideoModal(videoSrc, takenAt, caption) {
+            const modal = document.getElementById('imageModal');
+            const modalContent = modal.querySelector('.modal-content');
+            // Remove previous video if any
+            let prevVideo = modalContent.querySelector('video');
+            if (prevVideo) prevVideo.remove();
+            // Remove image if present
+            let modalImg = modalContent.querySelector('img');
+            if (modalImg) modalImg.style.display = 'none';
+
+            // Create video element
+            const video = document.createElement('video');
+            video.src = videoSrc;
+            video.controls = true;
+            video.autoplay = true;
+            video.style.maxWidth = '100%';
+            video.style.maxHeight = '80vh';
+            video.style.display = 'block';
+            video.style.margin = '0 auto';
+
+            // Insert video before modalInfo
+            const modalInfo = modalContent.querySelector('#modalInfo');
+            modalContent.insertBefore(video, modalInfo);
+            modalInfo.textContent = `${takenAt || ''}${caption ? ' - ' + caption.substring(0, 30) : ''}`;
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Close modal on close button
+            const closeBtn = modalContent.querySelector('#modalClose');
+            closeBtn.onclick = function () {
+                video.pause();
+                video.remove();
+                if (modalImg) modalImg.style.display = '';
+                modal.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            };
+        }
+
+        // Helper for showing image in modal from src (for story images)
+        function openImageModalFromSrc(src, title) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = modal.querySelector('#modalImage');
+            const modalInfo = modal.querySelector('#modalInfo');
+            // Remove video if present
+            let prevVideo = modal.querySelector('video');
+            if (prevVideo) prevVideo.remove();
+            modalImg.src = src;
+            modalImg.alt = title || '';
+            modalImg.style.display = '';
+            modalInfo.textContent = title || '';
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
 
         // Render reels gallery

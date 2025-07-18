@@ -1,456 +1,396 @@
-# Instagram Data Mining & Analysis Platform
+# Instagram Analyzer
 
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
-[![Poetry](https://img.shields.io/badge/dependency%20management-poetry-blue)](https://python-poetry.org/)
-[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-150%2B%20passing-brightgreen)](#testing)
-[![Coverage](https://img.shields.io/badge/coverage-80%2B%25-brightgreen)](#testing)
-
-Professional-grade **Data Mining and Analysis Platform** for Instagram exported data. Extracts deep insights, behavioral patterns, and actionable intelligence from comprehensive Instagram datasets including conversations, interactions, media, and user activity patterns.
-
-## 🎯 Data Mining Capabilities
-
-### � Advanced Data Extraction
-- **Multi-Format Support**: JSON files, SQLite databases, and complex nested data structures
-- **Conversation Mining**: Deep analysis of direct messages, story replies, and comment threads
-- **Relationship Mapping**: Social network analysis and interaction pattern discovery
-- **Temporal Data Mining**: Time-series analysis of user behavior and engagement patterns
-- **Content Intelligence**: Natural language processing of captions, comments, and messages
-
-### 🔍 Data Analysis Features
-- **Behavioral Analytics**: User activity patterns, engagement rhythms, and communication habits
-- **Social Network Analysis**: Relationship graphs, influence mapping, and community detection
-- **Sentiment Analysis**: Emotional tone analysis of conversations and content
-- **Privacy Intelligence**: Data exposure analysis and personal information audit
-- **Statistical Modeling**: Correlation analysis, trend detection, and predictive insights
-
-### 🗄️ Database Integration
-- **SQLite Analysis**: Direct querying and analysis of Instagram's internal database structures
-- **Data Warehouse**: Centralized storage and indexing of processed Instagram data
-- **Schema Discovery**: Automatic detection and mapping of Instagram's evolving data formats
-- **Query Engine**: Advanced SQL capabilities for custom data exploration
-
-## ✨ Analysis Features
-
-### 🔬 Core Data Mining
-- **Comprehensive Data Support**: Posts, stories, reels, direct messages, archived content, deleted content, and story interactions
-- **Intelligent Data Discovery**: Automatically detects and maps Instagram export structure with validation
-- **Multi-Source Integration**: Combines JSON exports, SQLite databases, and media metadata
-- **Privacy-First Mining**: All data processing happens locally - no external data transmission
-
-### 📈 Advanced Analytics
-- **Conversation Analysis**: Deep dive into messaging patterns, response times, and communication networks
-- **Engagement Intelligence**: Sophisticated metrics for likes, comments, shares, and interaction quality
-- **Content Performance Mining**: Analysis of what content performs best and why
-- **User Journey Mapping**: Track user behavior evolution over time
-- **Network Graph Analysis**: Visualize and analyze social connections and influence patterns
-- **Temporal Pattern Discovery**: Identify peak activity times, seasonal trends, and behavioral changes
-
-### 🧠 Machine Learning Insights
-- **Clustering Analysis**: Automatic grouping of similar content, users, and behaviors
-- **Anomaly Detection**: Identify unusual patterns in user behavior or engagement
-- **Predictive Analytics**: Forecast engagement trends and optimal posting strategies
-- **Text Mining**: Advanced NLP for sentiment, topic modeling, and linguistic analysis
-- **Image Analysis**: Metadata extraction and content categorization from photos/videos
-
-### 📊 Visualization & Intelligence Reports
-- **Interactive Data Dashboards**: Modern analytics interface with drill-down capabilities
-  - Conversation analytics with network graphs
-  - Engagement heatmaps and correlation matrices
-  - Temporal analysis with interactive timelines
-  - Social network visualization with D3.js
-  - Statistical distribution charts and trend analysis
-- **Executive Reports**: Professional PDF summaries with key insights and recommendations
-- **Raw Data Export**: Structured datasets for further analysis in R, Python, or business intelligence tools
-- **API Integration**: RESTful endpoints for connecting to external analytics platforms
-
-### ⚡ Enterprise-Grade Performance
-- **Big Data Processing**: Optimized for large Instagram datasets (10GB+ exports)
-- **Distributed Computing**: Multi-threaded analysis with memory optimization
-- **Caching Infrastructure**: Three-tier caching (memory, disk, database) for sub-second queries
-- **Stream Processing**: Real-time analysis of incoming data with incremental updates
-
-## Installation
+[![Python Ve# Installation
 
 ### Prerequisites
 - Python 3.9 or higher
-- SQLite 3.35+ (for database analysis)
-- 8GB+ RAM recommended for large datasets
 - Poetry (recommended) or pip
 
-### Using Poetry (Recommended)
+### Quick Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/instagram-data-analyzer.git
-cd instagram-data-analyzer
+git clone https://github.com/your-username/instagram-data-mining.git
+cd instagram-data-mining
 
-# Install dependencies (includes ML libraries)
+# Install dependencies with Poetry (recommended)
+poetry installimg.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
+[![Poetry](https://img.shields.io/badge/dependency%20management-poetry-blue)](https://python-poetry.org/)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](#testing)
+[![Coverage](https://img.shields.io/badge/coverage-80%2B%25-brightgreen)](#testing)
+
+A comprehensive analysis tool for Instagram data exports. Analyze your Instagram activity, generate insights, and create detailed reports about your social media usage patterns.
+
+## ✨ Key Features
+
+### 📊 Data Processing
+- **Multi-Format Support**: Handles Instagram's JSON export format with automatic structure detection
+- **Content Analysis**: Posts, stories, reels, comments, likes, and profile information
+- **Data Validation**: Comprehensive validation and error reporting
+- **Privacy Protection**: Local processing with anonymization options
+- **Performance Optimized**: Lazy loading and caching for efficient memory usage
+
+### 🔍 Analysis Capabilities
+- **Basic Statistics**: Content counts, engagement metrics, and activity summaries
+- **Temporal Analysis**: Activity patterns, posting schedules, and trend analysis
+- **Engagement Analysis**: Like/comment ratios, interaction patterns, and performance metrics
+- **Content Insights**: Hashtag analysis, media type distribution, and content patterns
+- **Profile Analysis**: Account activity, follower interactions, and usage statistics
+
+### 📈 Advanced Features
+- **Machine Learning**: Sentiment analysis, engagement prediction, and content categorization
+- **Caching System**: Three-tier caching (memory, disk, database) for improved performance
+- **Export Options**: HTML reports, JSON data, and PDF summaries
+- **CLI Interface**: Command-line tools for batch processing and automation
+- **API Integration**: Programmatic access for custom analysis workflows
+
+## 🚀 Installation
+
+### Prerequisites
+- Python 3.9 or higher
+- Poetry (recommended) or pip
+
+### Quick Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/instagram-analyzer.git
+cd instagram-analyzer
+
+# Install dependencies with Poetry (recommended)
 poetry install
 
-# Install with advanced analytics dependencies
-poetry install --with analysis
-
-# Activate the virtual environment
+# Activate virtual environment
 poetry shell
 ```
 
-### Using Docker (Enterprise Setup)
+### Alternative Installation
 
 ```bash
-# Build and run with Docker
-docker-compose up -d
+# Install with pip
+pip install -e .
 
-# Access the analysis environment
-docker exec -it instagram-analyzer bash
+# Or install specific dependency groups
+poetry install --with dev,ml
 ```
 
-## Quick Start
+## 🔧 Usage
 
-### 1. Prepare Your Instagram Data
+### Command Line Interface
+
+The main CLI tool is `instagram-miner` with the following commands:
+
+#### 1. Validate Data Export
 
 ```bash
-# Download your Instagram data (JSON format recommended)
-# Extract to a directory, maintaining folder structure
+# Validate Instagram data export structure
+instagram-miner validate /path/to/instagram/export
 
-# Validate your data structure
-instagram-analyzer validate /path/to/instagram/data
+# With verbose output
+instagram-miner validate /path/to/instagram/export -v
 ```
 
-### 2. Data Mining Analysis
+#### 2. Get Basic Information
 
 ```bash
-# Comprehensive analysis with all modules
-instagram-analyzer mine /path/to/instagram/data --full-analysis
-
-# Focus on conversation mining
-instagram-analyzer mine /path/to/instagram/data --focus conversations
-
-# Advanced social network analysis
-instagram-analyzer mine /path/to/instagram/data --network-analysis --graph-output
-
-# Database-focused analysis
-instagram-analyzer mine /path/to/instagram/data --database-analysis --export-sql
+# Display basic information about the data export
+instagram-miner info /path/to/instagram/export
 ```
 
-### 3. Advanced Analytics
+#### 3. Analyze Data
 
 ```bash
-# Machine learning insights
-instagram-analyzer analyze /path/to/instagram/data --ml-insights --clustering
+# Basic analysis with HTML report
+instagram-miner analyze /path/to/instagram/export
 
-# Sentiment analysis on conversations
-instagram-analyzer analyze /path/to/instagram/data --sentiment --language-detection
+# Specify output directory and format
+instagram-miner analyze /path/to/instagram/export -o ./output -f html
 
-# Privacy intelligence audit
-instagram-analyzer privacy-audit /path/to/instagram/data --risk-assessment
+# Include media analysis (slower but more comprehensive)
+instagram-miner analyze /path/to/instagram/export --include-media
+
+# Anonymize sensitive data in reports
+instagram-miner analyze /path/to/instagram/export --anonymize
+
+# Generate PDF report
+instagram-miner analyze /path/to/instagram/export -f pdf -o ./reports
 ```
 
-## Data Mining Modules
-
-### Core Mining Engines
+#### Global Options
 
 ```bash
-# Conversation Data Mining
-instagram-analyzer conversations DATA_PATH [OPTIONS]
+# Enable verbose logging
+instagram-miner -v analyze /path/to/data
 
-# Social Network Analysis
-instagram-analyzer network DATA_PATH --generate-graph --influence-analysis
+# Set specific log level
+instagram-miner --log-level DEBUG analyze /path/to/data
 
-# Content Intelligence Mining
-instagram-analyzer content DATA_PATH --nlp-analysis --topic-modeling
-
-# Temporal Pattern Analysis
-instagram-analyzer temporal DATA_PATH --time-series --seasonality
-
-# Database Schema Analysis
-instagram-analyzer database DATA_PATH --schema-discovery --query-optimization
+# Enable file logging
+instagram-miner --log-file ./logs analyze /path/to/data
 ```
 
-### Advanced Options
+### Programmatic API
 
-- `--output, -o`: Output directory for analysis results
-- `--format, -f`: Output format (html, json, pdf, sql, csv)
-- `--database-export`: Export to SQLite database for further analysis
-- `--ml-insights`: Enable machine learning analysis
-- `--privacy-audit`: Comprehensive privacy assessment
-- `--network-graph`: Generate social network visualizations
-- `--anonymize`: Advanced anonymization with k-anonymity
-- `--export-api`: Generate REST API endpoints for data access
+#### Basic Usage
 
-## Data Structure Support
+```python
+from instagram_analyzer import InstagramAnalyzer
 
-The tool supports various Instagram export formats:
+# Initialize analyzer
+analyzer = InstagramAnalyzer("/path/to/instagram/export")
 
-- **Full Export**: Complete data download with all categories
-- **Content Export**: Posts, stories, and reels only
-- **Partial Export**: Limited data sets
+# Load data (optional - uses lazy loading by default)
+analyzer.load_data()
+
+# Validate data
+validation = analyzer.validate_data()
+print(f"Data loaded: {validation['data_loaded']['valid']}")
+
+# Perform analysis
+results = analyzer.analyze()
+
+# Export results
+analyzer.export_html("./output")
+analyzer.export_json("./output/data.json")
+```
+
+#### Advanced Usage
+
+```python
+from instagram_analyzer import InstagramAnalyzer
+
+# Initialize with custom options
+analyzer = InstagramAnalyzer(
+    data_path="/path/to/export",
+    lazy_loading=True  # Enable lazy loading for large datasets
+)
+
+# Access specific data types
+posts = analyzer.posts  # Returns lazy-loaded posts
+stories = analyzer.stories  # Returns lazy-loaded stories
+profile = analyzer.profile  # Returns profile information
+
+# Generate specific analyses
+stats = analyzer.basic_stats
+temporal = analyzer.temporal_analysis
+engagement = analyzer.engagement_analysis
+
+# Export with options
+analyzer.export_html(
+    output_path="./reports",
+    anonymize=True,
+    include_media=True
+)
+```
 
 ### Supported Data Types
 
-- ✅ Posts (single and carousel)
-- ✅ Stories (including highlights)
-- ✅ Reels and IGTV
-- ✅ Comments and likes
-- ✅ Profile information
-- ✅ Followers/following lists
-- ⏳ Direct messages (coming soon)
-- ⏳ Live videos (coming soon)
+The analyzer supports the following Instagram data types:
 
-## Privacy & Security
+- ✅ **Posts**: Single and carousel posts with metadata
+- ✅ **Stories**: Regular and archived stories
+- ✅ **Reels**: Short-form video content
+- ✅ **Comments**: Comments on posts and reels
+- ✅ **Likes**: Liked posts and comments
+- ✅ **Profile**: Account information and settings
+- ✅ **Followers/Following**: Connection lists
+- ✅ **Story Interactions**: Story views, polls, questions
+- ✅ **Archived Content**: Previously archived posts
+- ✅ **Recently Deleted**: Deleted content (if available)
+
+## 📁 Data Structure
+
+### Instagram Export Format
+
+The tool expects Instagram data in the official JSON export format:
+
+```
+instagram-export/
+├── your_instagram_activity/
+│   ├── media/
+│   │   ├── posts_1.json
+│   │   ├── stories.json
+│   │   └── archived_posts.json
+│   ├── comments/
+│   │   ├── post_comments_1.json
+│   │   └── reels_comments.json
+│   └── likes/
+│       ├── liked_posts.json
+│       └── liked_comments.json
+├── media/
+│   ├── posts/
+│   │   └── YYYYMM/
+│   │       └── *.jpg
+│   └── stories/
+│       └── YYYYMM/
+│           └── *.jpg
+└── personal_information/
+    └── personal_information/
+        └── personal_information.json
+```
+
+### Data Validation
+
+The analyzer performs comprehensive validation:
+
+```python
+validation = analyzer.validate_data()
+
+# Check validation results
+if validation["data_loaded"]["valid"]:
+    print(f"Loaded: {validation['data_loaded']['details']}")
+
+if validation["profile_data"]["valid"]:
+    print("Profile information found")
+
+if validation["content_found"]["valid"]:
+    print(f"Total content: {validation['content_found']['count']}")
+```
+
+## 🔒 Privacy & Security
 
 ### Local Processing
-- All data processing happens on your local machine
-- No data is sent to external servers
-- No internet connection required for analysis
+- **No External Connections**: All data processing happens locally
+- **No Data Transmission**: Your data never leaves your machine
+- **Offline Operation**: Works without internet connection
 
-### Anonymization Options
-- Remove or hash personal identifiers
-- Strip metadata from reports
-- Generate shareable reports without sensitive data
+### Anonymization Features
+- **Personal Data Removal**: Strips usernames, display names, and identifiers
+- **Metadata Cleaning**: Removes location data and device information
+- **Report Sanitization**: Generates shareable reports without sensitive data
 
-### Sensitive Data Detection
-- Automatic detection of emails, phone numbers, URLs
-- Privacy risk assessment
-- Recommendations for data protection
+### Data Security
+- **Secure Processing**: Uses secure temporary files and memory handling
+- **Cache Protection**: Encrypted caching for sensitive data
+- **Audit Trail**: Comprehensive logging of all data processing activities
 
-## Data Mining Results
+## 📊 Analysis Results
 
-### Conversation Intelligence
+### Basic Statistics
 ```python
-� Conversation Analysis
-- Total Conversations: 1,247
-- Message Volume: 45,678 messages
-- Average Response Time: 12.3 minutes
-- Communication Patterns: Evening peak (7-9 PM)
-- Sentiment Distribution: 68% positive, 22% neutral, 10% negative
-- Language Detection: English (89%), Spanish (8%), Other (3%)
+stats = analyzer.basic_stats
+print(f"Posts: {stats.posts_count}")
+print(f"Stories: {stats.stories_count}")
+print(f"Engagement rate: {stats.engagement_rate:.2%}")
 ```
 
-### Social Network Insights
+### Temporal Analysis
 ```python
-🕸️ Network Analysis
-- Connection Graph: 892 nodes, 2,134 edges
-- Influence Score: Top 10 most influential connections
-- Community Detection: 7 distinct social clusters
-- Network Density: 0.34 (moderately connected)
-- Centrality Measures: Betweenness, closeness, eigenvector scores
+temporal = analyzer.temporal_analysis
+print(f"Most active hour: {temporal.peak_hour}")
+print(f"Most active day: {temporal.peak_day}")
+print(f"Activity consistency: {temporal.consistency_score:.2f}")
 ```
 
-### Behavioral Analytics
+### Content Analysis
 ```python
-🎯 User Behavior Mining
-- Activity Rhythm: 73% consistency score
-- Engagement Patterns: Visual content +45% engagement
-- Peak Performance: Sundays 8PM-10PM optimal posting window
-- Content Strategy: Stories drive 34% more DM conversations
-- Interaction Quality: Deep engagement vs. superficial metrics
+content = analyzer.content_analysis
+print(f"Top hashtags: {content.top_hashtags}")
+print(f"Media types: {content.media_distribution}")
+print(f"Average caption length: {content.avg_caption_length}")
 ```
 
-## Development
+## 🛠️ Development
 
-### Running Tests
+### Setup Development Environment
 
 ```bash
-# Run all tests
+# Install development dependencies
+poetry install --with dev
+
+# Install pre-commit hooks
+poetry run pre-commit install
+
+# Run tests
 poetry run pytest
 
 # Run with coverage
-poetry run pytest --cov=instagram_analyzer
-
-# Run specific test file
-poetry run pytest tests/unit/test_models.py
+poetry run pytest --cov=src/instagram_analyzer
 ```
 
 ### Code Quality
 
 ```bash
 # Format code
-poetry run black .
+poetry run black src/instagram_analyzer/ tests/
 
 # Sort imports
-poetry run isort .
+poetry run isort src/instagram_analyzer/ tests/
 
 # Type checking
-poetry run mypy instagram_analyzer
+poetry run mypy src/instagram_analyzer/
 
 # Lint code
-poetry run flake8
+poetry run flake8 src/instagram_analyzer/
+
+# Run all quality checks
+make quality
 ```
 
-## API Usage for Data Scientists
+### Testing
 
-```python
-from instagram_analyzer import DataMiner, NetworkAnalyzer, ConversationMiner
-
-# Initialize the data mining engine
-miner = DataMiner("/path/to/instagram/data")
-miner.load_datasets()
-
-# Conversation analysis
-conv_analyzer = ConversationMiner(miner.conversations)
-conversation_insights = conv_analyzer.analyze_patterns()
-sentiment_analysis = conv_analyzer.sentiment_analysis()
-
-# Network analysis
-network = NetworkAnalyzer(miner.connections)
-graph = network.build_social_graph()
-communities = network.detect_communities()
-influence_scores = network.calculate_influence()
-
-# Export for external analysis
-miner.export_to_database("analysis.db")
-miner.export_for_r("data_export.csv")
-miner.export_for_tableau("tableau_extract.hyper")
-```
-
-## Database Analysis
-
-### SQLite Integration
 ```bash
-# Analyze Instagram's internal database structure
-instagram-analyzer db-analyze /path/to/ChatStorage.sqlite
+# Run all tests
+PYTHONPATH=src poetry run pytest
 
-# Custom SQL queries on processed data
-instagram-analyzer sql-query "SELECT * FROM conversations WHERE sentiment = 'positive'"
+# Run specific test file
+PYTHONPATH=src poetry run pytest tests/unit/test_models.py
 
-# Export database schema
-instagram-analyzer db-schema --output schema.sql
+# Run with coverage report
+PYTHONPATH=src poetry run pytest --cov=src/instagram_analyzer --cov-report=html
 ```
 
-### Data Warehouse Features
-- **Automated ETL**: Extract, Transform, Load Instagram data into structured format
-- **Indexing Strategy**: Optimized indexes for fast querying on large datasets
-- **Query Optimization**: Automatic query planning for complex analytical queries
-- **Data Lineage**: Track data transformation and processing history
+## 🏗️ Architecture
 
-## Machine Learning Integration
+### Core Components
 
-### Supported ML Frameworks
-- **scikit-learn**: Classification, clustering, and regression analysis
-- **NetworkX**: Graph analysis and social network metrics
-- **NLTK/spaCy**: Natural language processing and sentiment analysis
-- **Pandas/NumPy**: Statistical analysis and data manipulation
+- **`core/analyzer.py`**: Main `InstagramAnalyzer` class
+- **`parsers/`**: Data parsing and validation modules
+- **`models/`**: Pydantic data models for all Instagram content types
+- **`analyzers/`**: Analysis modules for statistics and insights
+- **`exporters/`**: Report generation (HTML, JSON, PDF)
+- **`cache/`**: Three-tier caching system
+- **`ml/`**: Machine learning models and features
+- **`utils/`**: Utility functions and helpers
 
-### Custom Models
-- **Engagement Prediction**: Forecast content performance
-- **Sentiment Classification**: Advanced emotion detection in text
-- **User Segmentation**: Behavioral clustering and persona development
-- **Anomaly Detection**: Identify unusual patterns in user behavior
+### Data Flow
 
-## Enterprise Features
+1. **Data Detection**: Automatically detects Instagram export structure
+2. **Validation**: Validates data integrity and format
+3. **Parsing**: Converts JSON to typed Python objects
+4. **Analysis**: Generates statistics and insights
+5. **Export**: Creates reports in multiple formats
 
-### Privacy & Compliance
-- **GDPR Compliance**: Data minimization and right-to-explanation support
-- **Data Anonymization**: Advanced k-anonymity and differential privacy
-- **Audit Trails**: Complete logging of all data processing activities
-- **Secure Processing**: Encrypted data handling and secure temporary storage
-
-### Scalability
-- **Horizontal Scaling**: Process multiple Instagram accounts simultaneously
-- **Memory Optimization**: Handle 50GB+ datasets efficiently
-- **Incremental Analysis**: Process only new/changed data
-- **Distributed Processing**: Multi-core and cluster computing support
-
-## Development & Integration
-
-### API Development
-```python
-# RESTful API for external integration
-from instagram_analyzer.api import create_app
-
-app = create_app()
-# GET /api/v1/conversations/summary
-# POST /api/v1/analyze/sentiment
-# GET /api/v1/network/graph
-```
-
-### Plugin Architecture
-```python
-# Custom analysis plugins
-from instagram_analyzer.plugins import AnalysisPlugin
-
-class CustomAnalyzer(AnalysisPlugin):
-    def analyze(self, data):
-        # Your custom analysis logic
-        return results
-```
-
-## Contributing
+## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
-### Development Setup
+### Development Workflow
 
-```bash
-# Fork and clone the repository
-git clone https://github.com/your-username/instagram-data-analyzer.git
-cd instagram-data-analyzer
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
 
-# Install development dependencies
-poetry install --with dev
-
-# Install pre-commit hooks
-pre-commit install
-```
-
-## Roadmap
-
-### Phase 1 - Core Features ✅
-- [x] Basic data parsing and validation
-- [x] Core analysis modules
-- [x] CLI interface
-- [x] HTML/JSON export
-
-### Phase 2 - Advanced Analysis 🚧
-- [ ] Sentiment analysis for comments/captions
-- [ ] Network analysis for connections
-- [ ] Advanced visualizations
-- [ ] PDF export with charts
-
-### Phase 3 - Enhanced Features 📋
-- [ ] Direct message analysis
-- [ ] Geolocation analysis
-- [ ] Machine learning insights
-- [ ] Web dashboard interface
-
-### Phase 4 - Integrations 💡
-- [ ] Export to other platforms
-- [ ] API for third-party tools
-- [ ] Plugin system
-- [ ] Cloud processing options
-
-## FAQ
-
-**Q: Is my data safe?**
-A: Yes! All processing happens locally on your machine. No data is sent to external servers.
-
-**Q: What Instagram export format is supported?**
-A: The tool supports JSON format exports from Instagram's official data download feature.
-
-**Q: Can I share the generated reports?**
-A: Yes! Use the `--anonymize` flag to remove sensitive information before sharing.
-
-**Q: How long does analysis take?**
-A: Typically 1-5 minutes for standard exports. Larger datasets or media analysis may take longer.
-
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
-- Built with ❤️ for the Instagram community
+- Built for privacy-conscious Instagram users
 - Thanks to all contributors and beta testers
 - Special thanks to the Python data science community
 
-## Support
+## 📞 Support
 
-- 📧 Email: support@instagram-analyzer.com
-- 🐛 Issues: [GitHub Issues](https://github.com/your-username/instagram-analyzer/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/your-username/instagram-analyzer/discussions)
-- 📖 Documentation: [Full Documentation](https://instagram-analyzer.readthedocs.io)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/your-username/instagram-analyzer/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-username/instagram-analyzer/discussions)
+- 📖 **Documentation**: [Full Documentation](docs/README.md)
 
 ---
 

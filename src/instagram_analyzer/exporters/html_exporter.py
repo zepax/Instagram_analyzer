@@ -1,11 +1,22 @@
 """Advanced HTML exporter for Instagram analysis reports."""
 
 import json
+import os
+import shutil
 from collections import Counter
 from datetime import datetime, timedelta
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 
 from .. import __version__
 from ..analyzers.network_analysis import NetworkAnalyzer
@@ -26,31 +37,70 @@ class HTMLExporter:
         """Initialize HTML exporter."""
         pass
 
-    def export(self, analyzer: Any, output_path: Path, anonymize: bool = False) -> Path:
+    def export(
+        self,
+        analyzer: Any,
+        output_path: Path,
+        anonymize: bool = False,
+        show_progress: bool = False,
+    ) -> Path:
         """Export analysis to HTML report.
 
         Args:
             analyzer: InstagramAnalyzer instance with loaded data
             output_path: Directory to save the report
             anonymize: Whether to anonymize sensitive data
+            show_progress: Whether to show progress bars
 
         Returns:
             Path to the generated HTML file
         """
-        # Generate analysis data
-        report_data = self._generate_report_data(analyzer, anonymize)
+        if show_progress:
+            console = Console()
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[bold blue]{task.description}"),
+                BarColumn(complete_style="green", finished_style="green"),
+                TextColumn("{task.percentage:>3.0f}%"),
+                TimeElapsedColumn(),
+                console=console,
+            ) as progress:
+                main_task = progress.add_task("Generating HTML report", total=100)
 
-        # Generate HTML content
-        html_content = self._render_template(report_data)
+                # Generate analysis data
+                progress.update(main_task, description="Collecting analysis data...")
+                report_data = self._generate_report_data(analyzer, anonymize)
+                progress.update(main_task, advance=60)
 
-        # Save to file
-        report_file = output_path / "instagram_analysis.html"
-        with open(report_file, "w", encoding="utf-8") as f:
-            f.write(html_content)
+                # Generate HTML content
+                progress.update(main_task, description="Rendering HTML template...")
+                html_content = self._render_template(report_data)
+                progress.update(main_task, advance=30)
 
-        return report_file
+                # Save to file
+                progress.update(main_task, description="Writing HTML file...")
+                report_file = output_path / "instagram_analysis.html"
+                with open(report_file, "w", encoding="utf-8") as f:
+                    f.write(html_content)
+                progress.update(main_task, advance=10)
 
-    def _generate_report_data(self, analyzer: Any, anonymize: bool) -> Dict[str, Any]:
+                progress.update(main_task, description="HTML report complete!")
+                return report_file
+        else:
+            # Generate analysis data
+            report_data = self._generate_report_data(analyzer, anonymize)
+
+            # Generate HTML content
+            html_content = self._render_template(report_data)
+
+            # Save to file
+            report_file = output_path / "instagram_analysis.html"
+            with open(report_file, "w", encoding="utf-8") as f:
+                f.write(html_content)
+
+            return report_file
+
+    def _generate_report_data(self, analyzer: Any, anonymize: bool) -> dict[str, Any]:
         """Generate comprehensive report data."""
         data = {
             "metadata": self._get_metadata(analyzer, anonymize),
@@ -64,12 +114,14 @@ class HTMLExporter:
             "charts_data": self._get_charts_data(analyzer),
             "network_graph": self._get_network_graph_data(analyzer),
             "additional_content": self._get_additional_content_data(analyzer),
-            "story_interactions": self._get_story_interactions_data(analyzer, anonymize),
+            "story_interactions": self._get_story_interactions_data(
+                analyzer, anonymize
+            ),
         }
 
         return data
 
-    def _get_metadata(self, analyzer: Any, anonymize: bool) -> Dict[str, Any]:
+    def _get_metadata(self, analyzer: Any, anonymize: bool) -> dict[str, Any]:
         """Get report metadata."""
         metadata = {
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -110,9 +162,9 @@ class HTMLExporter:
 
         return metadata
 
-    def _get_overview_stats(self, analyzer: Any, anonymize: bool) -> Dict[str, Any]:
+    def _get_overview_stats(self, analyzer: Any, anonymize: bool) -> dict[str, Any]:
         """Get overview statistics."""
-        overview: Dict[str, Any] = {}
+        overview: dict[str, Any] = {}
 
         # Basic counts
         overview["total_posts"] = len(analyzer.posts)
@@ -139,7 +191,8 @@ class HTMLExporter:
             1
             for item in analyzer.recently_deleted
             if item.timestamp
-            and item.timestamp > datetime.now(item.timestamp.tzinfo) - timedelta(days=30)
+            and item.timestamp
+            > datetime.now(item.timestamp.tzinfo) - timedelta(days=30)
         )
 
         # Story interactions summary
@@ -152,7 +205,7 @@ class HTMLExporter:
 
         return overview
 
-    def _get_temporal_analysis(self, analyzer: Any) -> Dict[str, Any]:
+    def _get_temporal_analysis(self, analyzer: Any) -> dict[str, Any]:
         """Get temporal analysis data."""
         posts = analyzer.posts
         if not posts:
@@ -209,7 +262,7 @@ class HTMLExporter:
             },
         }
 
-    def _get_engagement_analysis(self, analyzer: Any) -> Dict[str, Any]:
+    def _get_engagement_analysis(self, analyzer: Any) -> dict[str, Any]:
         """Get engagement analysis data."""
         posts = analyzer.posts
         if not posts:
@@ -238,7 +291,9 @@ class HTMLExporter:
                         "likes": p.likes_count,
                         "comments": p.comments_count,
                         "date": (
-                            p.timestamp.strftime("%Y-%m-%d") if p.timestamp else "Unknown"
+                            p.timestamp.strftime("%Y-%m-%d")
+                            if p.timestamp
+                            else "Unknown"
                         ),
                         "media_count": len(p.media),
                     }
@@ -252,7 +307,9 @@ class HTMLExporter:
                         "likes": p.likes_count,
                         "comments": p.comments_count,
                         "date": (
-                            p.timestamp.strftime("%Y-%m-%d") if p.timestamp else "Unknown"
+                            p.timestamp.strftime("%Y-%m-%d")
+                            if p.timestamp
+                            else "Unknown"
                         ),
                         "media_count": len(p.media),
                     }
@@ -261,7 +318,9 @@ class HTMLExporter:
             },
             "distribution": {
                 "avg_likes": (
-                    round(sum(likes_counts) / len(likes_counts), 1) if likes_counts else 0
+                    round(sum(likes_counts) / len(likes_counts), 1)
+                    if likes_counts
+                    else 0
                 ),
                 "median_likes": (
                     sorted(likes_counts)[len(likes_counts) // 2] if likes_counts else 0
@@ -281,7 +340,7 @@ class HTMLExporter:
             },
         }
 
-    def _get_content_analysis(self, analyzer: Any) -> Dict[str, Any]:
+    def _get_content_analysis(self, analyzer: Any) -> dict[str, Any]:
         """Get content analysis data."""
         content_data = {}
 
@@ -382,38 +441,74 @@ class HTMLExporter:
             },
         }
 
-    def _get_posts_data(self, analyzer: Any, anonymize: bool) -> List[dict[str, Any]]:
+    def _get_posts_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
         """Get formatted posts data."""
         return [
             self._format_post_for_report(p, analyzer, anonymize)
             for p in sorted(analyzer.posts, key=lambda x: x.timestamp, reverse=True)
         ]
 
-    def _get_stories_data(self, analyzer: Any, anonymize: bool) -> List[dict[str, Any]]:
+    def _get_stories_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
         """Get formatted stories data."""
         return [
             self._format_story_for_report(s, analyzer, anonymize)
             for s in sorted(analyzer.stories, key=lambda x: x.taken_at, reverse=True)
         ]
 
-    def _get_reels_data(self, analyzer: Any, anonymize: bool) -> List[dict[str, Any]]:
+    def _get_reels_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
         """Get formatted reels data."""
         return [
             self._format_reel_for_report(r, analyzer, anonymize)
             for r in sorted(analyzer.reels, key=lambda x: x.taken_at, reverse=True)
         ]
 
-    def _get_additional_content_data(self, analyzer: Any) -> Dict[str, Any]:
-        """Get data for archived and recently deleted content."""
+    def _get_additional_content_data(self, analyzer: Any) -> dict[str, Any]:
+        """Get data for archived and recently deleted content with relative media paths."""
         # Archived posts
-        archived_posts = [
-            self._format_post_for_report(
-                p, analyzer, False
-            )  # Anonymization not needed for internal data
-            for p in sorted(
-                analyzer.archived_posts, key=lambda x: x.timestamp, reverse=True
-            )
-        ]
+        archived_posts = []
+        for p in sorted(
+            analyzer.archived_posts, key=lambda x: x.timestamp, reverse=True
+        ):
+            post_data = self._format_post_for_report(p, analyzer, False)
+            # Make all media paths relative if present
+            for media in post_data.get("media", []):
+                if "uri" in media and media["uri"]:
+                    try:
+                        html_dir = (
+                            analyzer.output_path
+                            if hasattr(analyzer, "output_path")
+                            else Path(".")
+                        )
+                        if not hasattr(analyzer, "output_path") and hasattr(
+                            analyzer, "report_file"
+                        ):
+                            html_dir = Path(analyzer.report_file).parent
+                        img_path = Path(media["uri"])
+                        if not img_path.is_absolute():
+                            img_path = (analyzer.data_path / img_path).resolve()
+                        rel_path = os.path.relpath(str(img_path), str(html_dir))
+                        media["uri"] = rel_path
+                    except Exception:
+                        pass
+                if "thumbnail" in media and media["thumbnail"]:
+                    try:
+                        html_dir = (
+                            analyzer.output_path
+                            if hasattr(analyzer, "output_path")
+                            else Path(".")
+                        )
+                        if not hasattr(analyzer, "output_path") and hasattr(
+                            analyzer, "report_file"
+                        ):
+                            html_dir = Path(analyzer.report_file).parent
+                        thumb_path = Path(media["thumbnail"])
+                        if not thumb_path.is_absolute():
+                            thumb_path = (analyzer.data_path / thumb_path).resolve()
+                        rel_path = os.path.relpath(str(thumb_path), str(html_dir))
+                        media["thumbnail"] = rel_path
+                    except Exception:
+                        pass
+            archived_posts.append(post_data)
 
         # Recently deleted content
         recently_deleted = []
@@ -421,9 +516,52 @@ class HTMLExporter:
             analyzer.recently_deleted, key=lambda x: x.timestamp, reverse=True
         ):
             media_path = resolve_media_path(item.uri, analyzer.data_path)
+            thumb = (
+                get_image_thumbnail(media_path, (100, 100))
+                if item.media_type == "IMAGE" and media_path
+                else None
+            )
+            # Make uri and thumbnail always relative to output_dir
+            uri_val = item.uri
+            if uri_val:
+                try:
+                    html_dir = (
+                        analyzer.output_path
+                        if hasattr(analyzer, "output_path")
+                        else Path(".")
+                    )
+                    if not hasattr(analyzer, "output_path") and hasattr(
+                        analyzer, "report_file"
+                    ):
+                        html_dir = Path(analyzer.report_file).parent
+                    uri_path = Path(uri_val)
+                    if not uri_path.is_absolute():
+                        uri_path = (analyzer.data_path / uri_path).resolve()
+                    rel_path = os.path.relpath(str(uri_path), str(html_dir))
+                    uri_val = rel_path
+                except Exception:
+                    pass
+            if thumb:
+                try:
+                    html_dir = (
+                        analyzer.output_path
+                        if hasattr(analyzer, "output_path")
+                        else Path(".")
+                    )
+                    if not hasattr(analyzer, "output_path") and hasattr(
+                        analyzer, "report_file"
+                    ):
+                        html_dir = Path(analyzer.report_file).parent
+                    thumb_path = Path(thumb)
+                    if not thumb_path.is_absolute():
+                        thumb_path = (analyzer.data_path / thumb_path).resolve()
+                    rel_path = os.path.relpath(str(thumb_path), str(html_dir))
+                    thumb = rel_path
+                except Exception:
+                    pass
             recently_deleted.append(
                 {
-                    "uri": item.uri,
+                    "uri": uri_val,
                     "timestamp": (
                         item.timestamp.strftime("%Y-%m-%d %H:%M:%S")
                         if item.timestamp
@@ -431,11 +569,7 @@ class HTMLExporter:
                     ),
                     "media_type": item.media_type.value,
                     "title": item.title,
-                    "thumbnail": (
-                        get_image_thumbnail(media_path, (100, 100))
-                        if item.media_type == "IMAGE" and media_path
-                        else None
-                    ),
+                    "thumbnail": thumb,
                 }
             )
 
@@ -443,7 +577,7 @@ class HTMLExporter:
 
     def _get_story_interactions_data(
         self, analyzer: Any, anonymize: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get formatted story interactions data."""
         if not analyzer.story_interactions:
             return {"interactions": [], "summary": {}}
@@ -467,7 +601,7 @@ class HTMLExporter:
 
         return {"interactions": interactions, "summary": summary}
 
-    def _get_charts_data(self, analyzer: Any) -> Dict[str, Any]:
+    def _get_charts_data(self, analyzer: Any) -> dict[str, Any]:
         """Get data for generating charts."""
         charts_data = {}
         # Monthly activity data
@@ -476,31 +610,43 @@ class HTMLExporter:
             if post.timestamp:
                 month_key = post.timestamp.strftime("%Y-%m")
                 monthly_data[month_key] += 1
+        sorted_months = sorted(monthly_data.keys())
+        charts_data["monthly_activity"] = {
+            "labels": sorted_months,
+            "data": [monthly_data[m] for m in sorted_months],
+        }
 
         # Weekday activity
         weekday_data: Counter[str] = Counter()
         for post in analyzer.posts:
             if post.timestamp:
                 weekday_data[post.timestamp.strftime("%A")] += 1
+        weekday_labels = [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ]
+        charts_data["weekday_activity"] = {
+            "labels": weekday_labels,
+            "data": [weekday_data.get(day, 0) for day in weekday_labels],
+        }
 
         # Hour activity
         hourly_data: Counter[int] = Counter()
         for post in analyzer.posts:
             if post.timestamp:
                 hourly_data[post.timestamp.hour] += 1
+        hour_labels = [str(h) for h in range(24)]
+        charts_data["hourly_activity"] = {
+            "labels": hour_labels,
+            "data": [hourly_data.get(h, 0) for h in range(24)],
+        }
 
-        # Posts over time
-        posts_over_time = Counter(
-            p.timestamp.strftime("%Y-%m") for p in analyzer.posts if p.timestamp
-        )
-        if posts_over_time:
-            sorted_months = sorted(posts_over_time.keys())
-            charts_data["posts_over_time"] = {
-                "labels": sorted_months,
-                "data": [posts_over_time[m] for m in sorted_months],
-            }
-
-        # Engagement by weekday
+        # Engagement by weekday (se mantiene igual)
         engagement_by_weekday = {i: {"likes": 0, "comments": 0} for i in range(7)}
         for post in analyzer.posts:
             if post.timestamp:
@@ -508,20 +654,12 @@ class HTMLExporter:
                 engagement_by_weekday[weekday]["likes"] += post.likes_count
                 engagement_by_weekday[weekday]["comments"] += post.comments_count
         charts_data["engagement_by_weekday"] = {
-            "labels": [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-            ],
+            "labels": weekday_labels,
             "likes": [engagement_by_weekday[i]["likes"] for i in range(7)],
             "comments": [engagement_by_weekday[i]["comments"] for i in range(7)],
         }
 
-        # Story interactions over time
+        # Story interactions over time (se mantiene igual)
         interactions_over_time = Counter(
             i.timestamp.strftime("%Y-%m")
             for i in analyzer.story_interactions
@@ -544,7 +682,7 @@ class HTMLExporter:
         network = NetworkAnalyzer(analyzer.profile.username)
         return network.analyze(analyzer.posts)
 
-    def _render_template(self, data: Dict[str, Any]) -> str:
+    def _render_template(self, data: dict[str, Any]) -> str:
         """Render the HTML template with data."""
         # Get the template content
         template_content = self._get_template()
@@ -579,14 +717,16 @@ class HTMLExporter:
 
     def _format_post_for_report(
         self, post: Post, analyzer: Any, anonymize: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format a single post for the report."""
         data = {
             "id": getattr(post, "id", ""),
             "uri": getattr(post, "uri", ""),
             "shortcode": getattr(post, "shortcode", ""),
             "timestamp": (
-                post.timestamp.strftime("%Y-%m-%d %H:%M:%S") if post.timestamp else "N/A"
+                post.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                if post.timestamp
+                else "N/A"
             ),
             "likes": post.likes_count,
             "comments": post.comments_count,
@@ -607,13 +747,48 @@ class HTMLExporter:
                 "title": media.title or "",
             }
 
+            # Generar ruta relativa real desde el HTML generado hasta la imagen
+            if media_info["uri"]:
+                if str(media_info["uri"]).startswith("data:image/"):
+                    pass
+                else:
+                    try:
+                        # Determinar la ubicación del HTML generado
+                        # El output_path se pasa al export, lo usamos aquí
+                        html_dir = (
+                            analyzer.output_path
+                            if hasattr(analyzer, "output_path")
+                            else Path(".")
+                        )
+                        # Si analyzer no tiene output_path, intentar deducirlo
+                        if not hasattr(analyzer, "output_path") and hasattr(
+                            analyzer, "report_file"
+                        ):
+                            html_dir = Path(analyzer.report_file).parent
+                        img_path = Path(media_info["uri"])
+                        # Si la ruta no es absoluta, hazla absoluta respecto al data_path
+                        if not img_path.is_absolute():
+                            img_path = (analyzer.data_path / img_path).resolve()
+                        rel_path = os.path.relpath(str(img_path), str(html_dir))
+                        media_info["uri"] = rel_path
+                    except Exception:
+                        pass
+
             # Try to generate thumbnail for images
             if media.media_type.value == "image":
                 media_path = resolve_media_path(media.uri, analyzer.data_path)
                 if media_path:
                     thumbnail = get_image_thumbnail(media_path)
-                    if thumbnail:
-                        media_info["thumbnail"] = thumbnail
+                    # Make thumbnail with "../" prefix
+                    if thumbnail and not str(thumbnail).startswith("data:image/"):
+                        try:
+                            thumb_path = Path(thumbnail)
+                            if not str(thumb_path).startswith("../"):
+                                media_info["thumbnail"] = "../" + str(thumb_path)
+                            else:
+                                media_info["thumbnail"] = str(thumb_path)
+                        except Exception:
+                            pass  # No ponemos una imagen de marcador de posición
 
             media_list.append(media_info)
 
@@ -632,31 +807,60 @@ class HTMLExporter:
 
     def _format_story_for_report(
         self, story: Story, analyzer: Any, anonymize: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format a single story for the report."""
         data = {
             "taken_at": (
-                story.taken_at.strftime("%Y-%m-%d %H:%M:%S") if story.taken_at else "N/A"
+                story.taken_at.strftime("%Y-%m-%d %H:%M:%S")
+                if story.taken_at
+                else "N/A"
             ),
             "caption": clean_instagram_text(story.caption) if story.caption else "",
             "media_uri": story.media.uri if story.media else "",
             "media_type": story.media.media_type.value if story.media else "unknown",
         }
 
+        # Generar ruta relativa real desde el HTML generado hasta la imagen de la historia
+        if data["media_uri"]:
+            try:
+                html_dir = (
+                    analyzer.output_path
+                    if hasattr(analyzer, "output_path")
+                    else Path(".")
+                )
+                if not hasattr(analyzer, "output_path") and hasattr(
+                    analyzer, "report_file"
+                ):
+                    html_dir = Path(analyzer.report_file).parent
+                img_path = Path(data["media_uri"])
+                if not img_path.is_absolute():
+                    img_path = (analyzer.data_path / img_path).resolve()
+                rel_path = os.path.relpath(str(img_path), str(html_dir))
+                data["media_uri"] = rel_path
+            except Exception:
+                pass
+
         # Add thumbnail for images
         if story.media and story.media.media_type.value == "IMAGE":
             thumbnail_path = resolve_media_path(story.media.uri, analyzer.data_path)
             if thumbnail_path:
                 thumbnail = get_image_thumbnail(thumbnail_path, (150, 150))
-                data["thumbnail"] = thumbnail or ""
-            else:
-                data["thumbnail"] = ""
+                # Make thumbnail with "../" prefix
+                if thumbnail and not str(thumbnail).startswith("data:image/"):
+                    try:
+                        thumb_path = Path(thumbnail)
+                        if not str(thumb_path).startswith("../"):
+                            data["thumbnail"] = "../" + str(thumb_path)
+                        else:
+                            data["thumbnail"] = str(thumb_path)
+                    except Exception:
+                        pass  # No ponemos una imagen de marcador de posición
 
         return data
 
     def _format_reel_for_report(
         self, reel: Reel, analyzer: Any, anonymize: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format a single reel for the report."""
         taken_at = getattr(reel, "taken_at", None)
         reel_media = getattr(reel, "media", None)
@@ -670,20 +874,47 @@ class HTMLExporter:
             "comments_count": getattr(reel, "comments_count", 0),
         }
 
+        # Generar ruta relativa real desde el HTML generado hasta la imagen del reel
+        if data["media_uri"]:
+            try:
+                html_dir = (
+                    analyzer.output_path
+                    if hasattr(analyzer, "output_path")
+                    else Path(".")
+                )
+                if not hasattr(analyzer, "output_path") and hasattr(
+                    analyzer, "report_file"
+                ):
+                    html_dir = Path(analyzer.report_file).parent
+                img_path = Path(data["media_uri"])
+                if not img_path.is_absolute():
+                    img_path = (analyzer.data_path / img_path).resolve()
+                rel_path = os.path.relpath(str(img_path), str(html_dir))
+                data["media_uri"] = rel_path
+            except Exception:
+                pass
+
         # Add thumbnail for videos (first frame) or images
         if reel_media:
             thumbnail_path = resolve_media_path(reel_media.uri, analyzer.data_path)
             if thumbnail_path:
                 thumbnail = get_image_thumbnail(thumbnail_path, (150, 150))
-                data["thumbnail"] = thumbnail or ""
-            else:
-                data["thumbnail"] = ""
+                # Make thumbnail with "../" prefix
+                if thumbnail and not str(thumbnail).startswith("data:image/"):
+                    try:
+                        thumb_path = Path(thumbnail)
+                        if not str(thumb_path).startswith("../"):
+                            data["thumbnail"] = "../" + str(thumb_path)
+                        else:
+                            data["thumbnail"] = str(thumb_path)
+                    except Exception:
+                        pass  # No ponemos una imagen de marcador de posición
 
         return data
 
     def _format_interaction_for_report(
         self, interaction: StoryInteraction, anonymize: bool
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format a single story interaction for the report."""
         username = getattr(interaction, "username", "unknown")
         return {

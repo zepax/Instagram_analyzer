@@ -42,21 +42,46 @@ class JSONParser:
         # Some exports wrap profile data
         if "profile_user" in data:
             profile_data = data["profile_user"]
+            # Handle case where profile_user is a list
+            if isinstance(profile_data, list) and profile_data:
+                profile_data = profile_data[0]  # Take first item
         elif "account_information" in data:
             profile_data = data["account_information"]
 
+        # Extract profile fields from string_map_data structure if present
+        if "string_map_data" in profile_data:
+            string_map = profile_data["string_map_data"]
+            username = string_map.get("Username", {}).get("value", "")
+            name = string_map.get("Name", {}).get("value", "")
+            bio = string_map.get("Bio", {}).get("value", "")
+            email = string_map.get("Email", {}).get("value", "")
+            website = string_map.get("Website", {}).get("value", "")
+            phone_number = string_map.get("Phone Number", {}).get("value", "")
+            is_private = string_map.get("Private Account", {}).get("value", "").lower() == "true"
+            is_verified = string_map.get("Verified", {}).get("value", "").lower() == "true"
+        else:
+            # Fallback to standard field names
+            username = profile_data.get("username", "")
+            name = profile_data.get("name") or profile_data.get("full_name", "")
+            bio = profile_data.get("biography") or profile_data.get("bio", "")
+            email = profile_data.get("email", "")
+            website = profile_data.get("external_url") or profile_data.get("website", "")
+            phone_number = profile_data.get("phone_number", "")
+            is_private = profile_data.get("is_private", False)
+            is_verified = profile_data.get("is_verified", False)
+
         return Profile(
-            username=profile_data.get("username", ""),
-            name=profile_data.get("name") or profile_data.get("full_name"),
-            bio=profile_data.get("biography") or profile_data.get("bio"),
-            website=profile_data.get("external_url") or profile_data.get("website"),
-            email=profile_data.get("email"),
-            phone_number=profile_data.get("phone_number"),
+            username=username,
+            name=name,
+            bio=bio,
+            website=website,
+            email=email,
+            phone_number=phone_number,
             followers_count=profile_data.get("follower_count", 0),
             following_count=profile_data.get("following_count", 0),
             posts_count=profile_data.get("media_count", 0),
-            is_private=profile_data.get("is_private", False),
-            is_verified=profile_data.get("is_verified", False),
+            is_private=is_private,
+            is_verified=is_verified,
             is_business=profile_data.get("is_business_account", False),
             date_joined=self._parse_date(profile_data.get("date_joined")),
             profile_pic_url=profile_data.get("profile_pic_url"),
