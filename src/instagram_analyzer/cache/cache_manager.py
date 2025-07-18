@@ -169,11 +169,7 @@ class CacheManager:
                         logger.warning(f"Failed to store key {key} in memory cache")
 
                 # Store in disk cache
-                if (
-                    self.disk_cache
-                    and self.config.disk_cache_enabled
-                    and not memory_only
-                ):
+                if self.disk_cache and self.config.disk_cache_enabled and not memory_only:
                     if self.disk_cache.set(cache_key, value, ttl, force_compression):
                         success = True
                     else:
@@ -271,7 +267,7 @@ class CacheManager:
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
 
-    def keys(self, include_memory: bool = True, include_disk: bool = True) -> Set[str]:
+    def keys(self, include_memory: bool = True, include_disk: bool = True) -> set[str]:
         """Get all cache keys from specified layers.
 
         Args:

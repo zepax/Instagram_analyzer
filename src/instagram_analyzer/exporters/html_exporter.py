@@ -8,7 +8,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 from importlib import resources
 from pathlib import Path
-from typing import Any, dict, list, Optional
+from typing import Any, Optional
 
 from rich.console import Console
 from rich.progress import (
@@ -224,8 +224,7 @@ class HTMLExporter:
             1
             for item in analyzer.recently_deleted
             if item.timestamp
-            and item.timestamp
-            > datetime.now(item.timestamp.tzinfo) - timedelta(days=30)
+            and item.timestamp > datetime.now(item.timestamp.tzinfo) - timedelta(days=30)
         )
 
         # Story interactions summary
@@ -324,9 +323,7 @@ class HTMLExporter:
                         "likes": p.likes_count,
                         "comments": p.comments_count,
                         "date": (
-                            p.timestamp.strftime("%Y-%m-%d")
-                            if p.timestamp
-                            else "Unknown"
+                            p.timestamp.strftime("%Y-%m-%d") if p.timestamp else "Unknown"
                         ),
                         "media_count": len(p.media),
                     }
@@ -340,9 +337,7 @@ class HTMLExporter:
                         "likes": p.likes_count,
                         "comments": p.comments_count,
                         "date": (
-                            p.timestamp.strftime("%Y-%m-%d")
-                            if p.timestamp
-                            else "Unknown"
+                            p.timestamp.strftime("%Y-%m-%d") if p.timestamp else "Unknown"
                         ),
                         "media_count": len(p.media),
                     }
@@ -351,9 +346,7 @@ class HTMLExporter:
             },
             "distribution": {
                 "avg_likes": (
-                    round(sum(likes_counts) / len(likes_counts), 1)
-                    if likes_counts
-                    else 0
+                    round(sum(likes_counts) / len(likes_counts), 1) if likes_counts else 0
                 ),
                 "median_likes": (
                     sorted(likes_counts)[len(likes_counts) // 2] if likes_counts else 0
@@ -489,14 +482,11 @@ class HTMLExporter:
         self, analyzer: Any, anonymize: bool, max_items: Optional[int] = None
     ) -> list[dict[str, Any]]:
         """Get formatted stories data."""
-        sorted_stories = sorted(
-            analyzer.stories, key=lambda x: x.taken_at, reverse=True
-        )
+        sorted_stories = sorted(analyzer.stories, key=lambda x: x.taken_at, reverse=True)
         if max_items:
             sorted_stories = sorted_stories[:max_items]
         return [
-            self._format_story_for_report(s, analyzer, anonymize)
-            for s in sorted_stories
+            self._format_story_for_report(s, analyzer, anonymize) for s in sorted_stories
         ]
 
     def _get_reels_data(
@@ -644,8 +634,7 @@ class HTMLExporter:
         if max_items:
             sorted_interactions = sorted_interactions[:max_items]
         interactions = [
-            self._format_interaction_for_report(i, anonymize)
-            for i in sorted_interactions
+            self._format_interaction_for_report(i, anonymize) for i in sorted_interactions
         ]
 
         summary = {
@@ -783,9 +772,7 @@ class HTMLExporter:
             "uri": getattr(post, "uri", ""),
             "shortcode": getattr(post, "shortcode", ""),
             "timestamp": (
-                post.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                if post.timestamp
-                else "N/A"
+                post.timestamp.strftime("%Y-%m-%d %H:%M:%S") if post.timestamp else "N/A"
             ),
             "likes": post.likes_count,
             "comments": post.comments_count,
@@ -833,7 +820,8 @@ class HTMLExporter:
                             img_path = (analyzer.data_path / img_path).resolve()
                         rel_path = os.path.relpath(str(img_path), str(html_dir))
                         media_info["uri"] = rel_path
-                    except Exception:
+                    except (OSError, ValueError, TypeError) as e:
+                        logging.debug(f"Could not resolve media path: {e}")
                         pass
 
             # Try to generate thumbnail for images
@@ -849,7 +837,8 @@ class HTMLExporter:
                                 media_info["thumbnail"] = "../" + str(thumb_path)
                             else:
                                 media_info["thumbnail"] = str(thumb_path)
-                        except Exception:
+                        except (OSError, ValueError) as e:
+                            logging.debug(f"Could not create thumbnail: {e}")
                             pass  # No ponemos una imagen de marcador de posición
 
             media_list.append(media_info)
@@ -873,9 +862,7 @@ class HTMLExporter:
         """Format a single story for the report."""
         data = {
             "taken_at": (
-                story.taken_at.strftime("%Y-%m-%d %H:%M:%S")
-                if story.taken_at
-                else "N/A"
+                story.taken_at.strftime("%Y-%m-%d %H:%M:%S") if story.taken_at else "N/A"
             ),
             "caption": clean_instagram_text(story.caption) if story.caption else "",
             "media_uri": story.media.uri if story.media else "",

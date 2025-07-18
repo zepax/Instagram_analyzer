@@ -53,7 +53,7 @@ def generate_full_analysis(
         analyzer=analyzer,
         output_path=output_path,
         anonymize=anonymize,
-        embed_images=embed_images,
+        # embed_images parameter removed - no longer supported
     )
 
     print(f"✨ Reporte generado exitosamente:")
@@ -101,7 +101,7 @@ if __name__ == "__main__":
             data_path=data_path,
             output_path=output_path,
             anonymize=anonymize,
-            embed_images=embed_images,
+            # embed_images parameter removed - no longer supported
             open_result=True,
         )
         print(f"\n🎉 ¡Análisis completado! Archivo disponible en: {result_path}")

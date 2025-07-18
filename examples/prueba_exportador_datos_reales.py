@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-Prueba completa del exportador HTML con datos REALES de Instagram
+"""Prueba completa del exportador HTML con datos REALES de Instagram.
+
 Usa datos reales del directorio data/sample_exports.
 """
 
@@ -87,9 +87,7 @@ def test_exportador_datos_reales():
 
         # Generar datos del reporte
         print("  • Generando datos de análisis...")
-        report_data = exporter._generate_report_data(
-            analyzer, anonymize=False, embed_images=False
-        )
+        report_data = exporter._generate_report_data(analyzer, anonymize=False)
 
         # Renderizar template
         print("  • Renderizando template HTML...")

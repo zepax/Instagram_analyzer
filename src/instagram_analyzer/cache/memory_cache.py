@@ -238,7 +238,7 @@ class MemoryCache(Generic[T]):
 
             return True
 
-    def keys(self) -> Set[str]:
+    def keys(self) -> set[str]:
         """Get all non-expired cache keys.
 
         Returns:
@@ -280,8 +280,7 @@ class MemoryCache(Generic[T]):
             return {
                 **self._stats,
                 "hit_rate": hit_rate,
-                "memory_usage_pct": (self._current_size / self.config.memory_limit)
-                * 100,
+                "memory_usage_pct": (self._current_size / self.config.memory_limit) * 100,
                 "avg_entry_size": self._current_size / max(1, len(self._data)),
             }
 

@@ -10,6 +10,8 @@ import string
 from typing import Any, Optional, Union
 
 import nltk
+
+logger = logging.getLogger(__name__)
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -26,7 +28,7 @@ except (OSError, ConnectionError) as e:
 
 class TextPreprocessor:
     """Text preprocessing class for NLP tasks.
-    
+
     This class provides methods for cleaning, tokenizing, and transforming text
     data for use in machine learning models.
 
@@ -71,7 +73,8 @@ class TextPreprocessor:
             self.stop_words = (
                 set(stopwords.words(language)) if remove_stopwords else set()
             )
-        except Exception:
+        except (LookupError, ImportError, OSError) as e:
+            logger.warning(f"Could not load stopwords for {language}: {e}")
             self.stop_words = set()
 
         self.stemmer = PorterStemmer() if stemming else None

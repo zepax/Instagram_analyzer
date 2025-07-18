@@ -136,8 +136,12 @@ def _load_with_joblib_or_pickle(path: str) -> Any:
             # as it can execute arbitrary code
             with open(path, "rb") as f:
                 # Validate the path to ensure it's from our trusted source
-                if not os.path.abspath(path).startswith(os.path.abspath(os.path.dirname(__file__))):
-                    raise ValueError("Security check: Only loading models from trusted locations")
+                if not os.path.abspath(path).startswith(
+                    os.path.abspath(os.path.dirname(__file__))
+                ):
+                    raise ValueError(
+                        "Security check: Only loading models from trusted locations"
+                    )
                 return pickle.load(f)
     except Exception as e:
         logger.error(f"Error loading object: {str(e)}")
@@ -192,8 +196,12 @@ def load_model_metadata(path: str) -> dict[str, Any]:
             # as it can execute arbitrary code
             with open(path, "rb") as f:
                 # Validate the path to ensure it's from our trusted source
-                if not os.path.abspath(path).startswith(os.path.abspath(os.path.dirname(__file__))):
-                    raise ValueError("Security check: Only loading models from trusted locations")
+                if not os.path.abspath(path).startswith(
+                    os.path.abspath(os.path.dirname(__file__))
+                ):
+                    raise ValueError(
+                        "Security check: Only loading models from trusted locations"
+                    )
                 return pickle.load(f)
     except Exception as e:
         logger.error(f"Error loading model metadata: {str(e)}")

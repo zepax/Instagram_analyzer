@@ -1,8 +1,11 @@
 """Text processing utilities for Instagram data."""
 
 import html
+import logging
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def clean_instagram_text(text: Optional[str]) -> str:
@@ -57,8 +60,9 @@ def clean_instagram_text(text: Optional[str]) -> str:
             # Normalize whitespace
             text = " ".join(text.split())
 
-        except Exception:
+        except (UnicodeError, AttributeError, ValueError) as e:
             # If all else fails, keep only ASCII characters
+            logger.debug(f"Text cleaning fallback for text encoding issue: {e}")
             text = "".join(char for char in text if ord(char) < 128)
 
     return text.strip()

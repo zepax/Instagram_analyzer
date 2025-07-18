@@ -131,8 +131,8 @@ class GitAutomation:
                 for line in f:
                     if line.startswith("version ="):
                         return line.split('"')[1]
-        except Exception:
-            pass
+        except (FileNotFoundError, OSError, IndexError) as e:
+            print(f"Warning: Could not read version from pyproject.toml: {e}")
         return "0.1.0"
 
     def _increment_version(self, current_version: str, increment_type: str) -> str:

@@ -49,7 +49,7 @@ def generar_analisis_completo() -> Path:
         analyzer=analyzer,
         output_path=output_path,
         anonymize=anonymize,
-        embed_images=embed_images,
+        # embed_images parameter removed - no longer supported
     )
 
     print(f"✨ Reporte HTML generado en: {html_path}")

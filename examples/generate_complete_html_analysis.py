@@ -7,6 +7,7 @@ Ignora análisis gramatical - solo se enfoca en exportar HTML.
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 # Agregar src al path
 sys.path.insert(0, "src")
@@ -17,7 +18,7 @@ from instagram_analyzer.parsers.data_detector import DataDetector
 from instagram_analyzer.parsers.json_parser import JSONParser
 
 
-def main():
+def main() -> bool:
     # Configuración
     data_path = Path("data/sample_exports/instagram-pcFuHXmB")
     output_path = Path("final_analysis")
@@ -50,7 +51,7 @@ def main():
             file_posts = parser.parse_posts_from_file(post_file)
             posts.extend(file_posts)
             print(f"   📄 Posts de {post_file.name}: {len(file_posts)}")
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             print(f"   ❌ Error parseando {post_file.name}: {e}")
 
     # Parsear stories
@@ -60,7 +61,7 @@ def main():
             file_stories = parser.parse_stories_from_file(story_file)
             stories.extend(file_stories)
             print(f"   📄 Stories de {story_file.name}: {len(file_stories)}")
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             print(f"   ❌ Error parseando {story_file.name}: {e}")
 
     # Parsear reels
@@ -70,7 +71,7 @@ def main():
             file_reels = parser.parse_reels_from_file(reel_file)
             reels.extend(file_reels)
             print(f"   📄 Reels de {reel_file.name}: {len(file_reels)}")
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             print(f"   ❌ Error parseando {reel_file.name}: {e}")
 
     # Parsear archived posts
@@ -80,7 +81,7 @@ def main():
             file_archived = parser.parse_archived_posts_from_file(archived_file)
             archived_posts.extend(file_archived)
             print(f"   📄 Archived de {archived_file.name}: {len(file_archived)}")
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             print(f"   ❌ Error parseando {archived_file.name}: {e}")
 
     # Parsear recently deleted
@@ -90,7 +91,7 @@ def main():
             file_deleted = parser.parse_recently_deleted_from_file(deleted_file)
             recently_deleted.extend(file_deleted)
             print(f"   📄 Recently Deleted de {deleted_file.name}: {len(file_deleted)}")
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             print(f"   ❌ Error parseando {deleted_file.name}: {e}")
 
     # 3. Crear analyzer mock con los datos
@@ -99,8 +100,14 @@ def main():
     # Crear clase simple para contener los datos
     class SimpleAnalyzer:
         def __init__(
-            self, posts, stories, reels, archived_posts, recently_deleted, data_path
-        ):
+            self,
+            posts: list[Any],
+            stories: list[Any],
+            reels: list[Any],
+            archived_posts: list[Any],
+            recently_deleted: list[Any],
+            data_path: Path,
+        ) -> None:
             self.posts = posts
             self.stories = stories
             self.reels = reels
@@ -146,14 +153,13 @@ def main():
         html_file = exporter.export(
             analyzer=analyzer,
             output_path=output_path,
-            embed_images=True,  # ¡Clave para imágenes embebidas!
             anonymize=False,
         )
 
         print(f"✅ HTML generado exitosamente: {html_file}")
         print(f"📁 Tamaño del archivo: {html_file.stat().st_size / (1024*1024):.2f} MB")
 
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
         print(f"❌ Error generando HTML: {e}")
         import traceback
 
@@ -176,5 +182,4 @@ def main():
 
 if __name__ == "__main__":
     success = main()
-    sys.exit(0 if success else 1)
     sys.exit(0 if success else 1)

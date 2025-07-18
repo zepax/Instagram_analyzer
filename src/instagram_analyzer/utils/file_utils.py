@@ -1,12 +1,15 @@
 """File utility functions."""
 
 import json
+import logging
 import os
 from glob import glob
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .retry_utils import safe_file_operation, safe_json_load
+
+logger = logging.getLogger(__name__)
 
 
 def validate_path(path: Path) -> bool:
@@ -26,7 +29,8 @@ def validate_path(path: Path) -> bool:
         has_read = bool(mode & 0o400)
         has_execute = bool(mode & 0o100)
         return has_read and has_execute
-    except Exception:
+    except (OSError, AttributeError, PermissionError) as e:
+        logger.debug(f"Cannot check file access for {path}: {e}")
         return False
 
 
@@ -41,7 +45,8 @@ def get_file_size(file_path: Path) -> int:
     """
     try:
         return file_path.stat().st_size
-    except Exception:
+    except (OSError, FileNotFoundError) as e:
+        logger.debug(f"Cannot get file size for {file_path}: {e}")
         return 0
 
 
@@ -83,7 +88,8 @@ def safe_json_load(file_path: Path) -> Optional[dict[str, Any]]:
         except Exception as e2:
             print(f"DEBUG: Error with latin-1 encoding: {e2}")
             return None
-    except Exception:
+    except (OSError, PermissionError) as e:
+        logger.debug(f"Cannot load JSON file {file_path}: {e}")
         return None
 
 
@@ -99,7 +105,8 @@ def count_files_in_directory(directory: Path, pattern: str = "*") -> int:
     """
     try:
         return len(list(directory.glob(pattern)))
-    except Exception:
+    except (OSError, FileNotFoundError, PermissionError) as e:
+        logger.debug(f"Cannot count files in {directory}: {e}")
         return 0
 
 

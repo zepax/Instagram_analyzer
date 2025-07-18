@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Example: Compact HTML Export for Large Instagram Datasets
+"""Example: Compact HTML Export for Large Instagram Datasets.
 
 This example demonstrates how to generate smaller HTML reports
 for large Instagram datasets using the compact export feature.

@@ -47,7 +47,7 @@ import weakref
 from collections.abc import Generator, Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, dict, list, Optional
+from typing import Any, Optional
 
 from rich.console import Console
 from rich.progress import (
@@ -251,9 +251,7 @@ class InstagramAnalyzer:
                         )
                     else:
                         # Load all data immediately using parallel processing
-                        op_logger.progress(
-                            "Loading all data with parallel processing..."
-                        )
+                        op_logger.progress("Loading all data with parallel processing...")
                         profiler.take_snapshot("load_all_parallel")
                         self._load_all_data_parallel(data_structure, batch_size)
 
@@ -585,9 +583,7 @@ class InstagramAnalyzer:
             self.logger.error(f"Failed to load engagement data: {e}", exc_info=True)
             self._engagement_data = {}
 
-    def _load_all_data_parallel(
-        self, structure: dict[str, Any], batch_size: int
-    ) -> None:
+    def _load_all_data_parallel(self, structure: dict[str, Any], batch_size: int) -> None:
         """Load all data using parallel processing for improved performance.
 
         Args:
@@ -628,9 +624,7 @@ class InstagramAnalyzer:
                             stories = self.parser.parse_stories_parallel(data)
                             self._stories_list.extend(stories)
                     except Exception as e:
-                        self.logger.error(
-                            f"Error loading stories from {file_path}: {e}"
-                        )
+                        self.logger.error(f"Error loading stories from {file_path}: {e}")
                         continue
 
                 self.logger.info(
@@ -735,9 +729,7 @@ class InstagramAnalyzer:
                     )
                     self.logger.info("Successfully enriched posts with engagement data")
                 except Exception as e:
-                    self.logger.error(
-                        f"Error enriching posts with engagement data: {e}"
-                    )
+                    self.logger.error(f"Error enriching posts with engagement data: {e}")
 
             # Force garbage collection after loading all data
             force_gc_if_needed()
@@ -849,7 +841,7 @@ class InstagramAnalyzer:
                             if key in data and isinstance(data[key], list):
                                 count += len(data[key])
                                 break
-                except (ValueError, KeyError, TypeError, IOError) as e:
+                except (ValueError, KeyError, TypeError, OSError) as e:
                     logging.warning(f"Error processing interaction file {file_path}: {e}")
                     continue
         return count
@@ -1220,9 +1212,7 @@ class InstagramAnalyzer:
                 if include_engagement_prediction:
                     total_tasks += 1
 
-                ml_task = self.progress.add_task(
-                    "Running ML analysis", total=total_tasks
-                )
+                ml_task = self.progress.add_task("Running ML analysis", total=total_tasks)
 
                 try:
                     # Sentiment Analysis
@@ -1246,9 +1236,7 @@ class InstagramAnalyzer:
                         self.progress.update(ml_task, advance=1)
 
                     # Feature Engineering Results
-                    self.progress.update(
-                        ml_task, description="Extracting ML features..."
-                    )
+                    self.progress.update(ml_task, description="Extracting ML features...")
                     feature_results = self._extract_ml_features()
                     results.update(feature_results)
                     self.progress.update(ml_task, advance=1)
@@ -1428,9 +1416,7 @@ class InstagramAnalyzer:
                 "dominant_emotion": (
                     "positive"
                     if positive_count > negative_count
-                    else "negative"
-                    if negative_count > positive_count
-                    else "neutral"
+                    else "negative" if negative_count > positive_count else "neutral"
                 ),
                 "sentiment_distribution": {
                     "positive": positive_count,
@@ -1478,13 +1464,11 @@ class InstagramAnalyzer:
 
                 # Get feature importance
                 for metric in ["likes", "comments"]:
-                    importance = self.engagement_predictor.get_feature_importance(
-                        metric
-                    )
+                    importance = self.engagement_predictor.get_feature_importance(metric)
                     if importance:
-                        engagement_results["engagement_prediction"][
-                            "feature_importance"
-                        ][metric] = importance
+                        engagement_results["engagement_prediction"]["feature_importance"][
+                            metric
+                        ] = importance
 
                 # Predict optimal timing for a sample post
                 if self.posts:
@@ -1498,9 +1482,7 @@ class InstagramAnalyzer:
 
                 # Evaluate model performance
                 if len(posts_with_engagement) > 1:
-                    evaluation = self.engagement_predictor.evaluate(
-                        posts_with_engagement
-                    )
+                    evaluation = self.engagement_predictor.evaluate(posts_with_engagement)
                     engagement_results["engagement_prediction"][
                         "model_performance"
                     ] = evaluation
@@ -1564,13 +1546,11 @@ class InstagramAnalyzer:
 
                 # Get feature importance
                 for metric in ["likes", "comments"]:
-                    importance = self.engagement_predictor.get_feature_importance(
-                        metric
-                    )
+                    importance = self.engagement_predictor.get_feature_importance(metric)
                     if importance:
-                        engagement_results["engagement_prediction"][
-                            "feature_importance"
-                        ][metric] = importance
+                        engagement_results["engagement_prediction"]["feature_importance"][
+                            metric
+                        ] = importance
 
                 # Predict optimal timing for a sample post
                 if self.posts:
@@ -1584,9 +1564,7 @@ class InstagramAnalyzer:
 
                 # Evaluate model performance
                 if len(posts_with_engagement) > 1:
-                    evaluation = self.engagement_predictor.evaluate(
-                        posts_with_engagement
-                    )
+                    evaluation = self.engagement_predictor.evaluate(posts_with_engagement)
                     engagement_results["engagement_prediction"][
                         "model_performance"
                     ] = evaluation
@@ -1752,9 +1730,9 @@ class InstagramAnalyzer:
         if all_dates:
             min_date = min(all_dates)
             max_date = max(all_dates)
-            info[
-                "date_range"
-            ] = f"{min_date.strftime('%Y-%m-%d')} to {max_date.strftime('%Y-%m-%d')}"
+            info["date_range"] = (
+                f"{min_date.strftime('%Y-%m-%d')} to {max_date.strftime('%Y-%m-%d')}"
+            )
             info["days_active"] = (max_date - min_date).days
 
         return info
@@ -1794,9 +1772,7 @@ class InstagramAnalyzer:
                 exporter = HTMLExporter()
                 self.progress.update(export_task, advance=10)
 
-                self.progress.update(
-                    export_task, description="Generating HTML report..."
-                )
+                self.progress.update(export_task, description="Generating HTML report...")
                 result = exporter.export(
                     self,
                     output_path,
@@ -1892,9 +1868,7 @@ class InstagramAnalyzer:
                 exporter = PDFExporter()
                 self.progress.update(export_task, advance=10)
 
-                self.progress.update(
-                    export_task, description="Generating PDF report..."
-                )
+                self.progress.update(export_task, description="Generating PDF report...")
                 result = exporter.export(self, output_path, anonymize)
                 self.progress.update(export_task, advance=90)
 

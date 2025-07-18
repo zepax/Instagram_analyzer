@@ -1,10 +1,13 @@
 """Specialized parser for Instagram conversation/message data."""
 
 import json
+import logging
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from ..models.conversation import (
     Conversation,
@@ -143,8 +146,9 @@ class ConversationParser:
                 message = self._parse_single_message(msg_data, conversation_id)
                 if message:
                     messages.append(message)
-            except Exception:
+            except (KeyError, ValueError, TypeError) as e:
                 # Skip invalid messages but continue processing
+                logger.debug(f"Skipping invalid message in {conversation_id}: {e}")
                 continue
 
         # Sort messages by timestamp (oldest first)
@@ -272,7 +276,8 @@ class ConversationParser:
                     return datetime.fromtimestamp(timestamp)
             elif isinstance(timestamp, str):
                 return parse_instagram_date(timestamp)
-        except Exception:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.debug(f"Could not parse timestamp {timestamp}: {e}")
             pass
 
         return None

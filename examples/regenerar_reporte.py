@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Regenerar reporte con datos reales y inyección corregida
-"""
+"""Regenerar reporte con datos reales y inyección corregida."""
 
 import json
 import sys
