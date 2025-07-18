@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "instagram-data-mining"
-version = "0.2.03"
+version = "0.2.04"
 description = "Enterprise data mining and analytics platform for social media data with ML capabilities, advanced visualization, and API integration"
 authors = ["Instagram Data Mining Team"]
 license = "MIT"
