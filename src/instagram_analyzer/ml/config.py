@@ -9,7 +9,7 @@ for machine learning components and pipelines.
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 
 class MLModelType(Enum):
@@ -204,9 +204,8 @@ DEFAULT_CONFIGS: dict[str, MLConfig] = {
 
 
 def get_config(model_type: str, **kwargs) -> MLConfig:
-    """
-    Get configuration for a specific model type.
-
+    """Get configuration for a specific model type.
+    
     Args:
         model_type: Type of ML model
         **kwargs: Additional configuration parameters to override
@@ -231,9 +230,8 @@ def get_config(model_type: str, **kwargs) -> MLConfig:
 
 
 def get_preprocessor_config(preprocessor_type: str) -> dict[str, Any]:
-    """
-    Get configuration for a specific preprocessor type.
-
+    """Get configuration for a specific preprocessor type.
+    
     Args:
         preprocessor_type: Type of preprocessor
 

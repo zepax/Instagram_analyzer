@@ -5,9 +5,9 @@ This module provides tools for text preprocessing, including tokenization,
 stemming, lemmatization, and other NLP-related operations.
 """
 
-import re
+import logging
 import string
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import nltk
 from nltk.corpus import stopwords
@@ -19,14 +19,14 @@ try:
     nltk.download("punkt", quiet=True)
     nltk.download("stopwords", quiet=True)
     nltk.download("wordnet", quiet=True)
-except Exception:
-    pass  # Fail silently, will be handled in the class methods
+except (OSError, ConnectionError) as e:
+    # Fail with logging, will fallback to handle in class methods
+    logging.warning("Failed to download NLTK resources: %s", e)
 
 
 class TextPreprocessor:
-    """
-    Text preprocessing class for NLP tasks.
-
+    """Text preprocessing class for NLP tasks.
+    
     This class provides methods for cleaning, tokenizing, and transforming text
     data for use in machine learning models.
 
