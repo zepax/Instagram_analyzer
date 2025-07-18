@@ -5,7 +5,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 from importlib import resources
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 from .. import __version__
 from ..analyzers.network_analysis import NetworkAnalyzer
@@ -50,7 +50,7 @@ class HTMLExporter:
 
         return report_file
 
-    def _generate_report_data(self, analyzer: Any, anonymize: bool) -> dict[str, Any]:
+    def _generate_report_data(self, analyzer: Any, anonymize: bool) -> Dict[str, Any]:
         """Generate comprehensive report data."""
         data = {
             "metadata": self._get_metadata(analyzer, anonymize),
@@ -69,7 +69,7 @@ class HTMLExporter:
 
         return data
 
-    def _get_metadata(self, analyzer: Any, anonymize: bool) -> dict[str, Any]:
+    def _get_metadata(self, analyzer: Any, anonymize: bool) -> Dict[str, Any]:
         """Get report metadata."""
         metadata = {
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -110,9 +110,9 @@ class HTMLExporter:
 
         return metadata
 
-    def _get_overview_stats(self, analyzer: Any, anonymize: bool) -> dict[str, Any]:
+    def _get_overview_stats(self, analyzer: Any, anonymize: bool) -> Dict[str, Any]:
         """Get overview statistics."""
-        overview: dict[str, Any] = {}
+        overview: Dict[str, Any] = {}
 
         # Basic counts
         overview["total_posts"] = len(analyzer.posts)
@@ -152,7 +152,7 @@ class HTMLExporter:
 
         return overview
 
-    def _get_temporal_analysis(self, analyzer: Any) -> dict[str, Any]:
+    def _get_temporal_analysis(self, analyzer: Any) -> Dict[str, Any]:
         """Get temporal analysis data."""
         posts = analyzer.posts
         if not posts:
@@ -209,7 +209,7 @@ class HTMLExporter:
             },
         }
 
-    def _get_engagement_analysis(self, analyzer: Any) -> dict[str, Any]:
+    def _get_engagement_analysis(self, analyzer: Any) -> Dict[str, Any]:
         """Get engagement analysis data."""
         posts = analyzer.posts
         if not posts:
@@ -281,7 +281,7 @@ class HTMLExporter:
             },
         }
 
-    def _get_content_analysis(self, analyzer: Any) -> dict[str, Any]:
+    def _get_content_analysis(self, analyzer: Any) -> Dict[str, Any]:
         """Get content analysis data."""
         content_data = {}
 
@@ -382,28 +382,28 @@ class HTMLExporter:
             },
         }
 
-    def _get_posts_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
+    def _get_posts_data(self, analyzer: Any, anonymize: bool) -> List[dict[str, Any]]:
         """Get formatted posts data."""
         return [
             self._format_post_for_report(p, analyzer, anonymize)
             for p in sorted(analyzer.posts, key=lambda x: x.timestamp, reverse=True)
         ]
 
-    def _get_stories_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
+    def _get_stories_data(self, analyzer: Any, anonymize: bool) -> List[dict[str, Any]]:
         """Get formatted stories data."""
         return [
             self._format_story_for_report(s, analyzer, anonymize)
             for s in sorted(analyzer.stories, key=lambda x: x.taken_at, reverse=True)
         ]
 
-    def _get_reels_data(self, analyzer: Any, anonymize: bool) -> list[dict[str, Any]]:
+    def _get_reels_data(self, analyzer: Any, anonymize: bool) -> List[dict[str, Any]]:
         """Get formatted reels data."""
         return [
             self._format_reel_for_report(r, analyzer, anonymize)
             for r in sorted(analyzer.reels, key=lambda x: x.taken_at, reverse=True)
         ]
 
-    def _get_additional_content_data(self, analyzer: Any) -> dict[str, Any]:
+    def _get_additional_content_data(self, analyzer: Any) -> Dict[str, Any]:
         """Get data for archived and recently deleted content."""
         # Archived posts
         archived_posts = [
@@ -443,7 +443,7 @@ class HTMLExporter:
 
     def _get_story_interactions_data(
         self, analyzer: Any, anonymize: bool
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get formatted story interactions data."""
         if not analyzer.story_interactions:
             return {"interactions": [], "summary": {}}
@@ -467,7 +467,7 @@ class HTMLExporter:
 
         return {"interactions": interactions, "summary": summary}
 
-    def _get_charts_data(self, analyzer: Any) -> dict[str, Any]:
+    def _get_charts_data(self, analyzer: Any) -> Dict[str, Any]:
         """Get data for generating charts."""
         charts_data = {}
         # Monthly activity data
@@ -544,7 +544,7 @@ class HTMLExporter:
         network = NetworkAnalyzer(analyzer.profile.username)
         return network.analyze(analyzer.posts)
 
-    def _render_template(self, data: dict[str, Any]) -> str:
+    def _render_template(self, data: Dict[str, Any]) -> str:
         """Render the HTML template with data."""
         # Get the template content
         template_content = self._get_template()
@@ -579,7 +579,7 @@ class HTMLExporter:
 
     def _format_post_for_report(
         self, post: Post, analyzer: Any, anonymize: bool
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Format a single post for the report."""
         data = {
             "id": getattr(post, "id", ""),
@@ -632,7 +632,7 @@ class HTMLExporter:
 
     def _format_story_for_report(
         self, story: Story, analyzer: Any, anonymize: bool
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Format a single story for the report."""
         data = {
             "taken_at": (
@@ -656,7 +656,7 @@ class HTMLExporter:
 
     def _format_reel_for_report(
         self, reel: Reel, analyzer: Any, anonymize: bool
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Format a single reel for the report."""
         taken_at = getattr(reel, "taken_at", None)
         reel_media = getattr(reel, "media", None)
@@ -683,7 +683,7 @@ class HTMLExporter:
 
     def _format_interaction_for_report(
         self, interaction: StoryInteraction, anonymize: bool
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Format a single story interaction for the report."""
         username = getattr(interaction, "username", "unknown")
         return {

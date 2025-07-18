@@ -4,11 +4,11 @@ import json
 import logging
 import time
 from collections import Counter, defaultdict
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-from collections.abc import Iterator
 
 from ..analyzers.conversation_analyzer import ConversationAnalyzer
 from ..models.conversation import (
