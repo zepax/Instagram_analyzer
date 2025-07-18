@@ -1,26 +1,67 @@
-# GitHub Copilot Instructions for Instagram Analyzer
+# 🤖 **AI Assistant Instructions for Instagram Analyzer**
 
-## Project Architecture
+**MANDATORY WORKFLOW FOR ALL AI ASSISTANTS**
+
+This document establishes the official standards and procedures that ALL AI assistants (Claude, Copilot, ChatGPT, etc.) MUST follow when working on the Instagram Analyzer project.
+
+## **🎯 MANDATORY Git Workflow**
+
+### **CRITICAL: Current Working Branch**
+- **Primary branch**: `v0.2.05` (NOT main)
+- **Feature branches**: Created from `v0.2.05`
+- **Merge target**: Back to `v0.2.05`
+- **Quality gates**: MANDATORY before all commits
+
+### **Before ANY Code Changes**
+```bash
+# 1. Check current branch
+git branch
+# Should show: v0.2.05
+
+# 2. Switch to version branch
+git checkout v0.2.05
+
+# 3. Pull latest changes
+git pull origin v0.2.05
+
+# 4. Create feature branch
+git checkout -b feature/your-feature-name v0.2.05
+```
+
+### **Quality Gates (ENFORCED)**
+```bash
+# MANDATORY before every commit
+make quality
+
+# Individual checks
+make format      # Black + isort
+make lint        # Flake8 + pydocstyle
+make type-check  # MyPy
+make security    # Bandit
+make test        # All tests
+```
+
+## **🏗️ Project Architecture**
 
 This is a **Python data analysis tool** that processes Instagram data exports using a **src-layout** structure with Poetry dependency management. The codebase follows enterprise patterns with two-tier caching, streaming parsers, and modular analyzers.
 
-### Core Components & Data Flow
+### **Core Components & Data Flow**
 
 1. **Data Ingestion**: `parsers/data_detector.py` → `parsers/json_parser.py` → `models/` (Pydantic)
 2. **Analysis Pipeline**: `core/analyzer.py` orchestrates `analyzers/` modules (basic stats, temporal, conversation)
 3. **Export**: `exporters/html_exporter.py` (Chart.js + D3.js), `exporters/pdf_exporter.py` (ReportLab)
 4. **Caching**: Two-tier system (`cache/memory_cache.py` + `cache/disk_cache.py`) with intelligent fallback
 
-### Key Architectural Patterns
+### **Key Architectural Patterns**
 
 - **Streaming Processing**: Use `ijson` for large JSON files, implement `memory_profiler.py` patterns
 - **Cache-First**: Always check `CacheManager` before expensive operations (parsing, analysis)
 - **Lazy Loading**: Models use `__slots__` and property-based loading for memory efficiency
 - **Error Recovery**: Custom exception hierarchy in `exceptions.py` with retry decorators
 
-## Development Workflow
+## **⚙️ Development Workflow Commands**
 
-### Essential Commands (use these patterns)
+### **Essential Commands (MANDATORY)**
 
 ```bash
 # Development setup
@@ -36,8 +77,8 @@ poetry run pytest tests/unit/  # Fast unit tests
 poetry run pytest -m integration  # Slow integration tests
 poetry run pytest --cov=src/instagram_analyzer --cov-report=html
 
-# CLI usage
-poetry run instagram-analyzer analyze /path/to/data --format html --anonymize
+# CLI usage (Note: command is 'instagram-miner' not 'instagram-analyzer')
+instagram-miner analyze /path/to/data --format html --anonymize
 ```
 
 ### File Organization Rules

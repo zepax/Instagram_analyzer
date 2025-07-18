@@ -220,11 +220,216 @@ This project is fully equipped for AI-assisted development:
 
 The codebase follows defensive security practices and is designed for local-only processing of user data exports.
 
-## Development Workflow with Makefile
+# 🔧 **MANDATORY GIT WORKFLOW FOR ALL AI ASSISTANTS**
+
+**CRITICAL**: All AI assistants MUST follow this exact workflow. No exceptions.
+
+## **Branch Strategy (REQUIRED)**
+
+### **Branch Types & Naming:**
+- **`main`**: Production-ready code only
+- **`v0.x.x`**: Version development branches (work here)
+- **`feature/description`**: New features
+- **`hotfix/description`**: Critical fixes
+- **`bugfix/description`**: Bug fixes
+
+### **Current Working Branch:**
+- **Primary**: `v0.2.05` (current version branch)
+- **Next**: `v0.2.06` (when 0.2.05 is complete)
+
+## **MANDATORY WORKFLOW STEPS**
+
+### **1. BEFORE Starting ANY Work:**
+```bash
+# Check current branch
+git branch
+
+# Switch to version branch (NOT main)
+git checkout v0.2.05
+
+# Always pull latest changes
+git pull origin v0.2.05
+
+# Verify clean state
+git status
+```
+
+### **2. Create Feature Branch:**
+```bash
+# Use automation script (RECOMMENDED)
+python scripts/git-automation.py --interactive
+
+# Or manual creation
+git checkout -b feature/your-feature-name v0.2.05
+```
+
+### **3. Development Cycle:**
+```bash
+# Make changes
+# Run quality checks (MANDATORY before commit)
+make quality
+
+# Commit with proper format
+git add .
+git commit -m "feat: Add your feature description"
+
+# Push regularly (backup)
+git push -u origin feature/your-feature-name
+```
+
+### **4. Before Merge/PR:**
+```bash
+# Update base branch
+git checkout v0.2.05
+git pull origin v0.2.05
+
+# Rebase feature branch
+git checkout feature/your-feature-name
+git rebase v0.2.05
+
+# Final quality check
+make quality
+```
+
+### **5. Merge Feature:**
+```bash
+# Switch to version branch
+git checkout v0.2.05
+
+# Merge with no-fast-forward
+git merge --no-ff feature/your-feature-name
+
+# Push version branch
+git push origin v0.2.05
+
+# Clean up feature branch
+git branch -d feature/your-feature-name
+git push origin --delete feature/your-feature-name
+```
+
+## **COMMIT STANDARDS (ENFORCED)**
+
+### **Commit Message Format:**
+```
+<type>: <description>
+
+<optional body>
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### **Commit Types:**
+- **`feat`**: New feature
+- **`fix`**: Bug fix
+- **`docs`**: Documentation
+- **`style`**: Code formatting
+- **`refactor`**: Code refactoring
+- **`test`**: Tests
+- **`chore`**: Maintenance
+
+## **QUALITY GATES (MANDATORY)**
+
+### **Before Every Commit:**
+```bash
+# Run all quality checks
+make quality
+
+# Individual checks if needed
+make format      # Black + isort
+make lint        # Flake8 + pydocstyle
+make type-check  # MyPy
+make security    # Bandit + safety
+make test        # All tests
+```
+
+### **Never Commit Without:**
+- ✅ All tests passing
+- ✅ No linting errors
+- ✅ No type errors
+- ✅ Security checks passed
+
+## **MERGE STRATEGY (STRICT)**
+
+### **Merge Frequency:**
+- **Small features**: Same day
+- **Medium features**: Within 3 days
+- **Large features**: Break into smaller features
+
+### **Merge Requirements:**
+- Feature branch must be up-to-date with base
+- All quality checks must pass
+- No merge conflicts
+- Use `--no-ff` for feature merges
+
+## **VERSION MANAGEMENT**
+
+### **Version Branches:**
+- Work on `v0.2.05` until ready for release
+- Create `v0.2.06` for next version
+- Tag versions when complete: `git tag v0.2.05`
+
+### **Version Increment Rules:**
+- **PATCH** (0.2.05 → 0.2.06): Bug fixes, small features
+- **MINOR** (0.2.x → 0.3.0): Significant features
+- **MAJOR** (0.x.x → 1.0.0): Breaking changes
+
+## **AUTOMATION TOOLS**
+
+### **Git Automation Script:**
+```bash
+# Interactive branch creation
+python scripts/git-automation.py --interactive
+
+# View branch history
+python scripts/git-automation.py --history
+
+# Setup git hooks
+bash scripts/setup-git-automation.sh
+```
+
+## **EMERGENCY PROCEDURES**
+
+### **Fix Broken Commit:**
+```bash
+# Soft reset (keep changes)
+git reset --soft HEAD~1
+
+# Hard reset (discard changes)
+git reset --hard HEAD~1
+```
+
+### **Resolve Merge Conflicts:**
+```bash
+# During merge/rebase
+git status
+# Edit conflicted files
+git add resolved-file.py
+git rebase --continue
+```
+
+## **FORBIDDEN ACTIONS**
+
+### **NEVER DO:**
+- ❌ Commit directly to `main`
+- ❌ Force push to shared branches
+- ❌ Merge without quality checks
+- ❌ Skip tests or linting
+- ❌ Create long-lived feature branches (>3 days)
+
+### **ALWAYS DO:**
+- ✅ Work on version branches (`v0.2.05`)
+- ✅ Create feature branches for each task
+- ✅ Run `make quality` before commits
+- ✅ Use semantic commit messages
+- ✅ Rebase before merge
+
+## **Development Workflow with Makefile**
 
 The project includes a comprehensive Makefile for streamlined development:
 
-### Essential Makefile Commands
+### **Essential Makefile Commands**
 ```bash
 # Setup and installation
 make setup-dev          # Complete dev environment setup
@@ -244,6 +449,11 @@ make security          # Security checks (bandit + safety)
 # CI simulation
 make ci-full           # Simulate complete CI/CD pipeline
 make pre-commit        # Run all pre-commit hooks
+
+# Git workflow integration
+make git-setup         # Setup git automation
+make branch-new        # Create new feature branch
+make quality-commit    # Quality check + commit
 
 # Utilities
 make clean             # Clean build artifacts and cache

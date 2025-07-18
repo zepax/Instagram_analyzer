@@ -1,41 +1,68 @@
-# 🚀 Git Workflow & Development Process
+# 🚀 **OFFICIAL Git Workflow & Development Process**
 
-## Flujo de Trabajo Completo del Proyecto
+**MANDATORY FOR ALL AI ASSISTANTS AND DEVELOPERS**
 
-### 📋 Estrategia de Branching
+## **🔧 Current Branch Strategy (v0.2.05)**
 
-El proyecto utiliza un **Git Flow modificado** optimizado para desarrollo ágil y calidad enterprise:
-
+### **Primary Working Model:**
 ```
 main (production-ready)
-├── develop (integration branch)
-├── feat/ui-compact-reports-20250718
-├── feat/ml-sentiment-analysis-20250719
-├── fix/story-parsing-bug-20250720
-└── perf/memory-optimization-20250721
+├── v0.2.05 (current development branch - WORK HERE)
+├── v0.2.06 (next version branch - future)
+├── feature/compact-html-reports
+├── feature/git-automation
+├── hotfix/critical-fixes
+└── bugfix/minor-fixes
 ```
 
-### 🔄 Estructura de Ramas
+### **🎯 Branch Hierarchy (ENFORCED)**
 
-1. **`main`** - Rama principal de producción
-   - Solo código 100% estable y testeado
-   - Merge únicamente via Pull Request
-   - Requiere revisión obligatoria
+1. **`main`** - Production-ready code ONLY
+   - Protected branch
+   - Merge only via approved PR
+   - Requires all checks to pass
+   - Tagged releases only
 
-2. **`develop`** - Rama de integración
-   - Punto de integración para features
-   - Testing continuo
-   - Merge a `main` cada sprint
+2. **`v0.2.05`** - **CURRENT WORKING BRANCH**
+   - **All AI assistants work here**
+   - Feature development base
+   - Quality-assured code
+   - Ready for production merge
 
-3. **Feature Branches** - Ramas de características
-   - Patrón: `feat/descripcion-fecha`
-   - Vida corta: 1-3 días máximo
-   - Merge a `develop` via PR
+3. **`feature/description`** - Feature development
+   - Created from `v0.2.05`
+   - Lifespan: 1-3 days MAX
+   - Merge back to `v0.2.05`
+   - Auto-deleted after merge
 
-4. **Bugfix Branches** - Ramas de corrección
-   - Patrón: `fix/descripcion-fecha`
-   - Vida muy corta: horas/1 día
-   - Merge directo a `develop` o `main`
+4. **`hotfix/description`** - Critical fixes
+   - Created from `main` or `v0.2.05`
+   - Lifespan: Hours to 1 day
+   - Immediate merge priority
+
+### **📋 MANDATORY Branch Naming Convention**
+
+```bash
+# Feature branches
+feature/compact-html-export
+feature/ml-sentiment-analysis
+feature/api-authentication
+
+# Bug fixes
+bugfix/story-parsing-error
+bugfix/memory-leak-fix
+bugfix/cli-argument-validation
+
+# Hotfixes
+hotfix/security-vulnerability
+hotfix/data-corruption-fix
+hotfix/performance-critical-fix
+
+# Performance improvements
+perf/json-parsing-optimization
+perf/memory-usage-reduction
+perf/database-query-optimization
+```
 
 ### 🕒 Frecuencia de Merge
 

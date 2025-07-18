@@ -198,6 +198,63 @@ quick-check: test-fast lint ## Quick development check
 commit-ready: format lint type-check test ## Prepare for commit
 	@echo "$(GREEN)✅ Ready to commit!$(RESET)"
 
+# Git workflow integration
+.PHONY: git-setup
+git-setup: ## Setup Git automation tools
+	@echo "$(BLUE)Setting up Git automation...$(RESET)"
+	@bash scripts/setup-git-automation.sh
+	@echo "$(GREEN)✅ Git automation setup complete$(RESET)"
+
+.PHONY: branch-new
+branch-new: ## Create new feature branch interactively
+	@echo "$(BLUE)Creating new feature branch...$(RESET)"
+	@python scripts/git-automation.py --interactive
+
+.PHONY: branch-history
+branch-history: ## Show branch history
+	@echo "$(BLUE)Branch history:$(RESET)"
+	@python scripts/git-automation.py --history
+
+.PHONY: quality-commit
+quality-commit: quality ## Run quality checks and prepare for commit
+	@echo "$(GREEN)✅ Quality checks passed - ready to commit!$(RESET)"
+	@echo "$(YELLOW)Use: git add . && git commit -m 'feat: Your feature description'$(RESET)"
+
+.PHONY: workflow-status
+workflow-status: ## Show current workflow status
+	@echo "$(BLUE)Current Git Status:$(RESET)"
+	@git branch --show-current
+	@git status --porcelain
+	@echo "$(BLUE)Quality Status:$(RESET)"
+	@$(MAKE) quick-check
+
+.PHONY: workflow-validate
+workflow-validate: ## Validate workflow compliance
+	@echo "$(BLUE)Validating workflow compliance...$(RESET)"
+	@python scripts/validate-workflow.py
+
+.PHONY: workflow-help
+workflow-help: ## Show workflow help
+	@echo "$(BLUE)Instagram Analyzer - Git Workflow Commands:$(RESET)"
+	@echo ""
+	@echo "$(YELLOW)Setup:$(RESET)"
+	@echo "  make git-setup      - Setup Git automation tools"
+	@echo "  make workflow-validate - Validate workflow compliance"
+	@echo ""
+	@echo "$(YELLOW)Daily Development:$(RESET)"
+	@echo "  make branch-new     - Create new feature branch"
+	@echo "  make quality-commit - Quality check before commit"
+	@echo "  make workflow-status - Show current status"
+	@echo ""
+	@echo "$(YELLOW)Quality Gates:$(RESET)"
+	@echo "  make quality        - Full quality pipeline"
+	@echo "  make quick-check    - Fast development check"
+	@echo "  make commit-ready   - Prepare for commit"
+	@echo ""
+	@echo "$(YELLOW)Information:$(RESET)"
+	@echo "  make branch-history - Show branch history"
+	@echo "  make info          - Project information"
+
 .PHONY: pr-ready
 pr-ready: ci-full ## Prepare for pull request
 	@echo "$(GREEN)✅ Ready for pull request!$(RESET)"

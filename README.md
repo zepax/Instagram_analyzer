@@ -227,6 +227,54 @@ instagram-miner analyze /path/to/data --compact
 analyzer.export_html("./output", compact=True, max_items=50)
 ```
 
+## 🔧 Development Workflow
+
+### For Contributors & AI Assistants
+
+This project uses a **structured Git workflow** for consistent development:
+
+#### Quick Start
+```bash
+# Setup development environment
+make setup-dev
+
+# Setup Git automation tools
+make git-setup
+
+# Create new feature branch
+make branch-new
+
+# Quality check before commit
+make quality-commit
+```
+
+#### Git Workflow Rules
+- **Work on**: `v0.2.05` branch (current version)
+- **Feature branches**: Create from `v0.2.05`
+- **Merge back to**: `v0.2.05` branch
+- **Quality gates**: Run `make quality` before every commit
+
+#### Common Commands
+```bash
+# Development cycle
+make quick-check       # Fast development check
+make quality          # Full quality pipeline
+make commit-ready     # Prepare for commit
+make workflow-status  # Show current status
+
+# Branch management
+make branch-new       # Interactive branch creation
+make branch-history   # Show branch history
+```
+
+### For AI Assistants
+See [`.github/copilot-instructions.md`](./.github/copilot-instructions.md) and [`CLAUDE.md`](./CLAUDE.md) for detailed workflow instructions.
+
+### Documentation
+- **WORKFLOW.md**: Complete Git workflow guide
+- **TODO.md**: Prioritized development tasks
+- **CLAUDE.md**: AI assistant instructions
+
 ### Performance Benefits
 
 - **File Size**: 75-90% reduction (20MB → 2-5MB)
