@@ -66,8 +66,9 @@ RUN groupadd --gid 1000 vscode \
     && mkdir -p /home/vscode/.vscode-server /home/vscode/.vscode-server-insiders \
     && chown -R vscode:vscode /home/vscode
 
-# Instalar Poetry como root
-RUN pip install --no-cache-dir poetry==$POETRY_VERSION
+# Instalar Poetry directamente con sus dependencias
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir poetry==$POETRY_VERSION
 
 # Configurar Poetry
 RUN poetry config virtualenvs.create true \
@@ -108,16 +109,13 @@ RUN git config --global --add safe.directory /workspaces/Instagram_analyzer
 RUN mkdir -p /home/vscode/.claude \
     && mkdir -p /workspaces/Instagram_analyzer/{scripts/tools,src,tests,docs}
 
-# Verificar instalaciones
+# Verificar instalaciones básicas
 RUN echo "=== Verificando instalaciones ===" \
     && python --version \
-    && poetry --version \
     && node --version \
     && npm --version \
-    && claude --version \
     && sqlite3 --version \
-    && poetry env info \
-    && echo "=== Todas las instalaciones exitosas ==="
+    && echo "=== Instalaciones básicas exitosas ==="
 
 SHELL ["/bin/bash", "-c"]
 

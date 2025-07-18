@@ -7,5 +7,7 @@ and anomaly detection.
 """
 
 from instagram_analyzer.ml.models.base import MLModel
+from instagram_analyzer.ml.models.engagement import EngagementPredictor
+from instagram_analyzer.ml.models.sentiment import SentimentAnalyzer
 
-__all__ = ["MLModel"]
+__all__ = ["MLModel", "SentimentAnalyzer", "EngagementPredictor"]

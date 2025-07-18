@@ -43,10 +43,10 @@ import gc
 import html
 import json
 import weakref
+from collections.abc import Generator, Iterator
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from collections.abc import Generator, Iterator
 
 from ..analyzers import BasicStatsAnalyzer, TemporalAnalyzer
 from ..cache import CacheConfig, CacheManager, cached_analysis, cached_parsing
@@ -57,6 +57,7 @@ from ..exceptions import (
     InvalidDataFormatError,
 )
 from ..logging_config import create_operation_logger, get_logger
+from ..ml import EngagementPredictor, FeatureEngineer, SentimentAnalyzer
 from ..models import Media, Post, Profile, Reel, Story, StoryInteraction, User
 from ..parsers import DataDetector, JSONParser
 from ..parsers.engagement_parser import EngagementParser
@@ -111,6 +112,13 @@ class InstagramAnalyzer:
         # Analyzers
         self.basic_stats = BasicStatsAnalyzer()
         self.temporal_analyzer = TemporalAnalyzer()
+
+        # ML Components
+        self.sentiment_analyzer = SentimentAnalyzer(
+            model_type="textblob", include_emotions=True
+        )
+        self.engagement_predictor = EngagementPredictor(algorithm="random_forest")
+        self.feature_engineer = FeatureEngineer(include_derived=True)
 
         # Data detection
         self.detector = DataDetector()
@@ -712,6 +720,284 @@ class InstagramAnalyzer:
         results.update(temporal_stats)
 
         return results
+
+    def analyze_with_ml(
+        self,
+        include_media: bool = False,
+        include_sentiment: bool = True,
+        include_engagement_prediction: bool = True,
+    ) -> dict[str, Any]:
+        """Run comprehensive analysis including ML components.
+
+        Args:
+            include_media: Whether to include media file analysis
+            include_sentiment: Whether to run sentiment analysis
+            include_engagement_prediction: Whether to run engagement prediction
+
+        Returns:
+            Dictionary containing analysis results including ML insights
+        """
+        # Run standard analysis first
+        results = self.analyze(include_media=include_media)
+
+        try:
+            # Sentiment Analysis
+            if include_sentiment:
+                self.logger.info("Running sentiment analysis...")
+                sentiment_results = self._run_sentiment_analysis()
+                results.update(sentiment_results)
+
+            # Engagement Prediction
+            if include_engagement_prediction:
+                self.logger.info("Running engagement prediction...")
+                engagement_results = self._run_engagement_prediction()
+                results.update(engagement_results)
+
+            # Feature Engineering Results
+            self.logger.info("Extracting ML features...")
+            feature_results = self._extract_ml_features()
+            results.update(feature_results)
+
+        except Exception as e:
+            self.logger.warning(f"ML analysis failed: {str(e)}", exc_info=True)
+            results["ml_analysis_error"] = str(e)
+
+        return results
+
+    def _run_sentiment_analysis(self) -> dict[str, Any]:
+        """Run sentiment analysis on posts and conversations."""
+        sentiment_results = {
+            "sentiment_analysis": {
+                "posts": [],
+                "conversations": [],
+                "overall_sentiment": {
+                    "avg_polarity": 0.0,
+                    "avg_subjectivity": 0.0,
+                    "dominant_emotion": None,
+                    "sentiment_distribution": {},
+                },
+            }
+        }
+
+        all_sentiments = []
+
+        # Analyze posts
+        if self.posts:
+            post_texts = []
+            for post in self.posts:
+                if hasattr(post, "caption") and post.caption:
+                    post_texts.append(post.caption)
+
+            if post_texts:
+                post_sentiments = self.sentiment_analyzer.predict(post_texts)
+                sentiment_results["sentiment_analysis"]["posts"] = post_sentiments
+                if isinstance(post_sentiments, list):
+                    all_sentiments.extend(post_sentiments)
+                else:
+                    all_sentiments.append(post_sentiments)
+
+        # Analyze conversations if available
+        conversations = getattr(self, "conversations", [])
+        if conversations:
+            conversation_sentiments = self.sentiment_analyzer.analyze_conversations(
+                conversations
+            )
+            sentiment_results["sentiment_analysis"][
+                "conversations"
+            ] = conversation_sentiments
+
+        # Calculate overall sentiment metrics
+        if all_sentiments:
+            avg_polarity = sum(s.get("polarity", 0) for s in all_sentiments) / len(
+                all_sentiments
+            )
+            avg_subjectivity = sum(
+                s.get("subjectivity", 0) for s in all_sentiments
+            ) / len(all_sentiments)
+
+            emotions = [s.get("emotion") for s in all_sentiments if s.get("emotion")]
+            dominant_emotion = (
+                max(set(emotions), key=emotions.count) if emotions else None
+            )
+
+            # Sentiment distribution
+            polarities = [s.get("polarity", 0) for s in all_sentiments]
+            positive_count = sum(1 for p in polarities if p > 0.1)
+            negative_count = sum(1 for p in polarities if p < -0.1)
+            neutral_count = len(polarities) - positive_count - negative_count
+
+            sentiment_results["sentiment_analysis"]["overall_sentiment"] = {
+                "avg_polarity": avg_polarity,
+                "avg_subjectivity": avg_subjectivity,
+                "dominant_emotion": dominant_emotion,
+                "sentiment_distribution": {
+                    "positive": positive_count,
+                    "negative": negative_count,
+                    "neutral": neutral_count,
+                    "total": len(polarities),
+                },
+            }
+
+        return sentiment_results
+
+    def _run_engagement_prediction(self) -> dict[str, Any]:
+        """Run engagement prediction on posts."""
+        engagement_results = {
+            "engagement_prediction": {
+                "predictions": [],
+                "feature_importance": {},
+                "optimal_timing": {},
+                "model_performance": {},
+            }
+        }
+
+        if not self.posts:
+            return engagement_results
+
+        try:
+            # Train model on existing posts (if they have engagement data)
+            posts_with_engagement = [
+                post
+                for post in self.posts
+                if hasattr(post, "likes_count") or hasattr(post, "comments_count")
+            ]
+
+            if len(posts_with_engagement) >= 10:  # Minimum data for training
+                self.logger.info(
+                    f"Training engagement model on {len(posts_with_engagement)} posts"
+                )
+
+                # Train the model
+                self.engagement_predictor.fit(posts_with_engagement)
+
+                # Make predictions on all posts
+                predictions = self.engagement_predictor.predict(self.posts)
+                engagement_results["engagement_prediction"]["predictions"] = predictions
+
+                # Get feature importance
+                for metric in ["likes", "comments"]:
+                    importance = self.engagement_predictor.get_feature_importance(metric)
+                    if importance:
+                        engagement_results["engagement_prediction"]["feature_importance"][
+                            metric
+                        ] = importance
+
+                # Predict optimal timing for a sample post
+                if self.posts:
+                    sample_features = self.feature_engineer.transform([self.posts[0]])
+                    optimal_timing = self.engagement_predictor.predict_optimal_timing(
+                        sample_features
+                    )
+                    engagement_results["engagement_prediction"][
+                        "optimal_timing"
+                    ] = optimal_timing
+
+                # Evaluate model performance
+                if len(posts_with_engagement) > 1:
+                    evaluation = self.engagement_predictor.evaluate(posts_with_engagement)
+                    engagement_results["engagement_prediction"][
+                        "model_performance"
+                    ] = evaluation
+
+            else:
+                self.logger.warning(
+                    f"Insufficient data for engagement prediction (need ≥10, have {len(posts_with_engagement)})"
+                )
+                engagement_results["engagement_prediction"][
+                    "error"
+                ] = "Insufficient training data"
+
+        except Exception as e:
+            self.logger.error(f"Engagement prediction failed: {str(e)}", exc_info=True)
+            engagement_results["engagement_prediction"]["error"] = str(e)
+
+        return engagement_results
+
+    def _extract_ml_features(self) -> dict[str, Any]:  # noqa: C901
+        """Extract ML features from all content."""
+        feature_results = {
+            "ml_features": {
+                "posts": {},
+                "stories": {},
+                "reels": {},
+                "feature_summary": {},
+            }
+        }
+
+        try:
+            # Extract features from posts
+            if self.posts:
+                post_features = self.feature_engineer.transform(self.posts)
+                feature_results["ml_features"]["posts"] = post_features
+
+            # Extract features from stories
+            if self.stories:
+                story_features = self.feature_engineer.transform(self.stories)
+                feature_results["ml_features"]["stories"] = story_features
+
+            # Extract features from reels
+            if self.reels:
+                reel_features = self.feature_engineer.transform(self.reels)
+                feature_results["ml_features"]["reels"] = reel_features
+
+            # Create feature summary
+            all_data = []
+            if self.posts:
+                all_data.extend(self.posts)
+            if self.stories:
+                all_data.extend(self.stories)
+            if self.reels:
+                all_data.extend(self.reels)
+
+            if all_data:
+                summary_features = self.feature_engineer.transform(all_data)
+
+                # Calculate feature statistics
+                feature_summary = {}
+                for group_name, group_features in summary_features.items():
+                    if isinstance(group_features, dict):
+                        group_summary = {}
+                        for feature_name, feature_values in group_features.items():
+                            if isinstance(feature_values, list) and feature_values:
+                                if all(
+                                    isinstance(v, (int, float))
+                                    for v in feature_values
+                                    if v is not None
+                                ):
+                                    numeric_values = [
+                                        v for v in feature_values if v is not None
+                                    ]
+                                    if numeric_values:
+                                        group_summary[feature_name] = {
+                                            "mean": sum(numeric_values)
+                                            / len(numeric_values),
+                                            "min": min(numeric_values),
+                                            "max": max(numeric_values),
+                                            "count": len(numeric_values),
+                                        }
+                                else:
+                                    # For categorical features, count unique values
+                                    non_null_values = [
+                                        v for v in feature_values if v is not None
+                                    ]
+                                    if non_null_values:
+                                        unique_values = list(set(non_null_values))
+                                        group_summary[feature_name] = {
+                                            "unique_values": unique_values[
+                                                :10
+                                            ],  # Limit to 10
+                                            "unique_count": len(unique_values),
+                                            "total_count": len(non_null_values),
+                                        }
+                        feature_summary[group_name] = group_summary
+
+                feature_results["ml_features"]["feature_summary"] = feature_summary
+
+        except Exception as e:
+            self.logger.error(f"Feature extraction failed: {str(e)}", exc_info=True)
+            feature_results["ml_features"]["error"] = str(e)
+
+        return feature_results
 
     def validate_data(self) -> dict[str, dict[str, Any]]:
         """Validate loaded data integrity.

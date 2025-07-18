@@ -77,6 +77,7 @@ ruff = "^0.1.0"
 pytest-xdist = "^3.3.0"
 pytest-benchmark = "^4.0.0"
 # jupyter-lab = "^4.0.0"  # Deshabilitado: No se usa actualmente
+types-python-dateutil = "^2.9.0.20250708"
 
 [tool.poetry.group.analysis.dependencies]
 # Grupo opcional para análisis avanzado
