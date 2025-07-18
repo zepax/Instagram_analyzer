@@ -31,7 +31,7 @@ def create_test_media(uri="test.jpg", media_type=MediaType.IMAGE, timestamp=None
         duration=None,
         file_size=None,
         thumbnail_uri=None,
-        ig_media_id=None
+        ig_media_id=None,
     )
 
 
@@ -53,7 +53,7 @@ def create_test_post(media=None, timestamp=None, caption="Test post"):
         likes_count=0,
         comments_count=0,
         is_sponsored=False,
-        audience=None
+        audience=None,
     )
 
 
@@ -77,7 +77,7 @@ def create_test_reel(video=None, timestamp=None, caption="Test reel"):
         music_id=None,
         is_original_audio=False,
         shares_count=0,
-        plays_count=0
+        plays_count=0,
     )
 
 
@@ -100,7 +100,7 @@ def create_test_profile(username="testuser"):
         last_active=None,
         profile_pic_url=None,
         external_url=None,
-        category=None
+        category=None,
     )
 
 
@@ -314,7 +314,7 @@ class TestInstagramAnalyzerAnalysis:
                         duration=None,
                         file_size=None,
                         thumbnail_uri=None,
-                        ig_media_id=None
+                        ig_media_id=None,
                     )
                 ],
                 timestamp=datetime.now(timezone.utc),
@@ -326,7 +326,7 @@ class TestInstagramAnalyzerAnalysis:
                 content_type=ContentType.POST,
                 location=None,
                 is_sponsored=False,
-                audience=None
+                audience=None,
             )
         ]
         analyzer.reels = [
@@ -342,7 +342,7 @@ class TestInstagramAnalyzerAnalysis:
                     duration=None,
                     file_size=None,
                     thumbnail_uri=None,
-                    ig_media_id=None
+                    ig_media_id=None,
                 ),
                 timestamp=datetime.now(timezone.utc),
                 caption="Test reel",
@@ -354,7 +354,7 @@ class TestInstagramAnalyzerAnalysis:
                 music_id=None,
                 is_original_audio=False,
                 shares_count=0,
-                plays_count=0
+                plays_count=0,
             )
         ]
 
@@ -632,7 +632,9 @@ class TestInstagramAnalyzerErrorHandling:
         for i in range(1000):
             timestamp = datetime.now(timezone.utc)
             media = create_test_media(uri=f"test_{i}.jpg", timestamp=timestamp)
-            post = create_test_post(media=[media], timestamp=timestamp, caption=f"Test post {i}")
+            post = create_test_post(
+                media=[media], timestamp=timestamp, caption=f"Test post {i}"
+            )
             post.likes_count = i
             large_posts.append(post)
 
