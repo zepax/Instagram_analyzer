@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Analysis Report</title>
+    <script src="{{ CHART_JS_URL }}"></script>
+    <script src="{{ D3_JS_URL }}"></script>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        .chart-container {
+            width: 80%;
+            margin: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Instagram Analysis Report</h1>
+
+    <div id="overview">
+        <h2>Overview</h2>
+        <!-- Overview data will be injected here -->
+    </div>
+
+    <div id="temporal">
+        <h2>Temporal Analysis</h2>
+        <div class="chart-container">
+            <canvas id="temporalChart"></canvas>
+        </div>
+    </div>
+
+    <div id="engagement">
+        <h2>Engagement Analysis</h2>
+        <div class="chart-container">
+            <canvas id="engagementChart"></canvas>
+        </div>
+    </div>
+
+    <div id="posts">
+        <h2>Posts</h2>
+        <!-- Posts data will be injected here -->
+    </div>
+
+    <script>
+        const reportData = JSON.parse('{{ DATA_JSON | safe }}');
+
+        // Example of how to use the data to create a chart
+        const temporalCtx = document.getElementById('temporalChart').getContext('2d');
+        new Chart(temporalCtx, {
+            type: 'line',
+            data: {
+                labels: reportData.charts_data.temporal_analysis.labels,
+                datasets: [{
+                    label: 'Posts per Month',
+                    data: reportData.charts_data.temporal_analysis.data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+        new Chart(engagementCtx, {
+            type: 'bar',
+            data: {
+                labels: reportData.charts_data.engagement_analysis.labels,
+                datasets: [{
+                    label: 'Likes per Post',
+                    data: reportData.charts_data.engagement_analysis.data,
+                    backgroundColor: 'rgba(153, 102, 255, 0.6)'
+                }]
+            }
+        });
+
+        // Populate overview section
+        const overviewSection = document.getElementById('overview');
+        const overviewList = document.createElement('ul');
+        for (const [key, value] of Object.entries(reportData.overview)) {
+            const item = document.createElement('li');
+            item.textContent = `${key}: ${JSON.stringify(value)}`;
+            overviewList.appendChild(item);
+        }
+        overviewSection.appendChild(overviewList);
+
+        // Populate posts section
+        const postsSection = document.getElementById('posts');
+        const postsList = document.createElement('ul');
+        reportData.posts.forEach(post => {
+            const item = document.createElement('li');
+            item.innerHTML = `<b>${post.timestamp}</b>: ${post.caption}`;
+            postsList.appendChild(item);
+        });
+        postsSection.appendChild(postsList);
+    </script>
+</body>
+
+</html>

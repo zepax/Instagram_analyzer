@@ -1,0 +1,60 @@
+# Palabras sexuales explícitas (español)
+"cogi", "cogimos", "cogidon", "cogiend*", "sex*", "squirt", "motel", "round",
+"rounds", "cogen", "sexo", "lenceria", "bra", "tanga", "dildo", "yo arriba",
+"puta", "baby doll", "cogemos", "nudes", "condon", "condones", "clit",
+"cogida", "besos", "besamos", "mojada", "one night", "bj", "blowjob",
+"mamada", "dotado", "gigante", "mini", "topless",
+
+# Palabras similares adicionales (español)
+"hacer el amor", "acostarse", "intimidad", "intimo", "caricias", "caliente",
+"excitada", "excitado", "cachonda", "cachondo", "desnuda", "desnudo",
+"pasion", "pasional", "sensual", "erótico", "erotica", "follar", "joder",
+"tirar", "culear", "garchar", "singada", "singar", "venirse", "correrse",
+"orgasmo", "clímax", "gemir", "gemidos", "provocar", "provocativa",
+"seducir", "seductora", "tetona", "nalgona", "culona", "verga", "pene",
+"miembro", "vagina", "concha", "papaya", "panochita", "tetas", "senos",
+"bubis", "nalgas", "culo", "trasero",
+
+# Palabras en inglés
+"fuck", "fucking", "fucked", "horny", "hot", "sexy", "nude", "naked",
+"dick", "cock", "pussy", "tits", "boobs", "ass", "butt", "cum", "cumming",
+"orgasm", "moan", "moaning", "hard", "wet", "tight", "suck", "lick",
+"kiss", "touch", "finger", "ride", "bang", "screw", "hookup", "fwb",
+"booty call", "netflix and chill", "smash",
+
+# Nombres comunes español (masculinos)
+"alejandro", "alex", "carlos", "david", "daniel", "diego", "fernando",
+"javier", "jorge", "jose", "juan", "luis", "manuel", "mario", "miguel",
+"pablo", "pedro", "rafael", "ricardo", "roberto", "sergio", "antonio",
+"francisco", "andrés", "eduardo", "gabriel", "oscar", "victor",
+
+# Nombres comunes español (femeninos)
+"maria", "ana", "carmen", "laura", "sofia", "elena", "paula", "andrea",
+"cristina", "marta", "sara", "lucia", "pilar", "mercedes", "rocio",
+"beatriz", "silvia", "monica", "teresa", "patricia", "raquel", "nuria",
+"angela", "isabel", "eva", "gloria", "rosa", "amparo", "dolores",
+
+# Nombres comunes inglés (masculinos)
+"john", "michael", "david", "james", "robert", "william", "richard",
+"charles", "joseph", "thomas", "christopher", "daniel", "paul", "mark",
+"donald", "steven", "andrew", "joshua", "kevin", "brian", "george",
+"edward", "ronald", "timothy", "jason", "jeffrey", "ryan", "jacob",
+
+# Nombres comunes inglés (femeninos)
+"mary", "patricia", "jennifer", "linda", "elizabeth", "barbara", "susan",
+"jessica", "sarah", "karen", "nancy", "lisa", "betty", "helen", "sandra",
+"donna", "carol", "ruth", "sharon", "michelle", "laura", "sarah",
+"kimberly", "deborah", "dorothy", "amy", "angela",
+
+# Diminutivos y apodos comunes
+"babe", "baby", "amor", "mi amor", "cariño", "corazón", "vida", "cielo",
+"papi", "mami", "daddy", "honey", "sweetheart", "darling", "gorgeous",
+"beautiful", "hermosa", "guapo", "guapa", "linda", "lindo",
+
+# Lugares y situaciones
+"casa", "cuarto", "habitacion", "cama", "ducha", "baño", "hotel",
+"apartamento", "depa", "room", "bedroom", "shower", "bathroom",
+"apartment", "place", "my place", "your place", "come over", "vente",
+"ven aca", "te espero", "solo", "sola", "solos", "solas", "parents",
+"padres", "familia", "family", "alone", "privacy", "privacidad",
+"tonight", "esta noche", "mañana", "tomorrow"

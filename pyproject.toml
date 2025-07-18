@@ -1,37 +1,110 @@
 [tool.poetry]
-name = "instagram-analyzer"
-version = "0.1.0"
-description = "Advanced Instagram data analysis tool for processing exported data"
-authors = ["Instagram Analyzer Team"]
+name = "instagram-data-mining"
+version = "0.3.0"
+description = "Enterprise data mining and analytics platform for social media data with ML capabilities, advanced visualization, and API integration"
+authors = ["Instagram Data Mining Team"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "instagram_analyzer"}]
+packages = [{ include = "instagram_analyzer", from = "src" }]
+include = ["src/instagram_analyzer/templates/report.html"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+# Core dependencies
 click = "^8.1.7"
+typer = "^0.9.0"
+pydantic = "^2.0.0"
+rich = "^13.4.0"
+tqdm = "^4.65.0"
+python-dateutil = "^2.8.0"
+ijson = "^3.2.0"
+psutil = "^5.9.0"
+
+# Data processing
 pandas = "^2.1.0"
 numpy = "^1.24.0"
+sqlalchemy = "^2.0.0"
+sqlite-utils = "^3.34.0"
+requests = "^2.31.0"
+beautifulsoup4 = "^4.12.0"
+
+# ML dependencies
+scikit-learn = "^1.3.0"
+networkx = "^3.1.0"
+nltk = "^3.8.1"
+spacy = "^3.7.0"
+textblob = "^0.17.0"
+wordcloud = "^1.9.0"
+emoji = "^2.8.0"
+langdetect = "^1.0.9"
+
+# Visualization
 matplotlib = "^3.7.0"
 seaborn = "^0.12.0"
 plotly = "^5.15.0"
-pydantic = "^2.0.0"
-python-dateutil = "^2.8.0"
-tqdm = "^4.65.0"
-rich = "^13.4.0"
-textblob = "^0.17.0"
-wordcloud = "^1.9.0"
+bokeh = "^3.2.0"
+dash = "^2.14.0"
+
+# Export
+reportlab = "^4.0.0"
+pillow = "^10.0.0"
+jinja2 = "^3.1.0"
+
+# API & Integration
+fastapi = "^0.103.0"
+uvicorn = "^0.23.0"
+httpx = "^0.24.0"
+
+# ML model management
+mlflow = "^2.7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 pytest-cov = "^4.1.0"
+pytest-mock = "^3.11.1"
+pytest-asyncio = "^0.21.1"
 black = "^23.7.0"
 isort = "^5.12.0"
 flake8 = "^6.0.0"
 mypy = "^1.5.0"
+pre-commit = "^3.3.3"
+bandit = "^1.7.5"
+safety = "^2.3.5"
+pydocstyle = "^6.3.0"
+coverage = "^7.3.0"
+# Dependencias adicionales de desarrollo
+ruff = "^0.1.0"
+pytest-xdist = "^3.3.0"
+pytest-benchmark = "^4.0.0"
+# jupyter-lab = "^4.0.0"  # Deshabilitado: No se usa actualmente
+types-python-dateutil = "^2.9.0.20250708"
+
+[tool.poetry.group.docs.dependencies]
+# Documentation generation
+sphinx = "^7.0.0"
+sphinx_rtd_theme = "^1.3.0"
+myst-parser = "^2.0.0"
+sphinx-autodoc-typehints = "^1.24.0"
+
+[tool.poetry.group.security.dependencies]
+# Security tools
+pip-audit = "^2.6.0"
+safety = "^2.3.5"
+bandit = "^1.7.5"
+
+[tool.poetry.group.analysis.dependencies]
+# Grupo opcional para análisis avanzado
+# Dependencias deshabilitadas por no usarse actualmente:
+# jupyter-lab = "^4.0.0"
+# ipywidgets = "^8.1.0"
+# streamlit = "^1.26.0"  # Conflicto con Python 3.9.7
+# Mantenemos las dependencias para análisis y visualizaciones:
+bokeh = "^3.2.0" # Para visualizaciones interactivas
+dash = "^2.14.0" # Para dashboard web
 
 [tool.poetry.scripts]
-instagram-analyzer = "instagram_analyzer.cli:main"
+instagram-miner = "instagram_analyzer.cli:main"
+data-api = "instagram_analyzer.api:start"
 
 [build-system]
 requires = ["poetry-core"]
@@ -39,14 +112,183 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | migrations
+)/
+'''
 
 [tool.isort]
 profile = "black"
 multi_line_output = 3
+line_length = 88
+known_first_party = ["instagram_analyzer"]
+known_third_party = [
+    "click",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "plotly",
+    "pydantic",
+    "dateutil",
+    "tqdm",
+    "rich",
+    "textblob",
+    "wordcloud",
+    "reportlab",
+    "PIL",
+    "sqlalchemy",
+    "sqlite_utils",
+    "typer",
+    # "jupyter",  # Deshabilitado: No se usa actualmente
+    # "ipython",  # Deshabilitado: No se usa actualmente
+    "networkx",
+    "sklearn",
+    "requests",
+    "bs4",
+    "emoji",
+    "langdetect",
+]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = [
+    "textblob.*",
+    "wordcloud.*",
+    "reportlab.*",
+    "matplotlib.*",
+    "seaborn.*",
+    "plotly.*",
+    "sqlite_utils.*",
+    "networkx.*",
+    "sklearn.*",
+    "bs4.*",
+    "emoji.*",
+    "langdetect.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--cov=instagram_analyzer",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "database: marks tests that require database",
+    "network: marks tests that require network access",
+]
+
+[tool.coverage.run]
+source = ["src/instagram_analyzer"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "*/backup/*",
+    "*/output/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+precision = 2
+
+[tool.bandit]
+exclude_dirs = ["tests", "build", "dist", "backup", "output", "data"]
+skips = ["B101", "B601"]                                              # Skip assert and shell usage warnings
+
+# Configuración adicional para Ruff (linter moderno)
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+select = [
+    "E",
+    "F",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "A",
+    "C4",
+    "G",
+    "PIE",
+    "T20",
+    "Q",
+]
+ignore = ["E501"] # Ignora líneas largas (manejado por black)
+extend-exclude = ["migrations", "backup", "output", "data"]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["S101", "D"] # Permite asserts y no requiere docstrings en tests
+"scripts/*" = ["T201"]    # Permite prints en scripts
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.isort]
+known-first-party = ["instagram_analyzer"]

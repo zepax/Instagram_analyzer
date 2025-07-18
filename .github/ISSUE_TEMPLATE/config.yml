@@ -1,0 +1,41 @@
+name: 🎯 Choose Issue Type
+description: Select the type of issue you want to report
+title: "[ISSUE TYPE]: "
+labels: ["needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this issue! Please choose the most appropriate option below.
+
+  - type: checkboxes
+    id: issue-type
+    attributes:
+      label: What type of issue is this?
+      description: Select all that apply
+      options:
+        - label: 🐛 Bug report - Something isn't working as expected
+        - label: 🚀 Feature request - I'd like to request a new feature
+        - label: 📚 Documentation - Issue with documentation
+        - label: ❓ Question - I need help using the tool
+        - label: 💡 Discussion - I want to discuss an idea or approach
+
+  - type: textarea
+    id: quick-description
+    attributes:
+      label: Quick Description
+      description: Briefly describe your issue
+      placeholder: Tell us what's on your mind
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        After submitting this issue, you'll be able to edit it and add more specific details based on the type you selected above.
+
+        **Please note**:
+        - For bugs, make sure to include reproduction steps
+        - For features, describe your use case clearly
+        - For questions, check the documentation first
+        - Be respectful and constructive in your communication
