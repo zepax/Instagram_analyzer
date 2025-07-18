@@ -77,7 +77,10 @@ def main(
     "--compact", is_flag=True, help="Generate compact reports (smaller file size)"
 )
 @click.option(
-    "--max-items", type=int, default=100, help="Maximum items per section in compact mode"
+    "--max-items",
+    type=int,
+    default=100,
+    help="Maximum items per section in compact mode",
 )
 @click.pass_context
 def analyze(

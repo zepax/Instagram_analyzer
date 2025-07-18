@@ -56,19 +56,16 @@ def safe_json_load(file_path: Path) -> Optional[dict[str, Any]]:
         Parsed JSON data or None if loading fails
     """
     try:
-
         # Convert to Path if it's a string
         if isinstance(file_path, str):
             file_path = Path(file_path)
 
         if not file_path.exists():
-
             return None
 
         file_size = file_path.stat().st_size
 
         if file_size == 0:
-
             return None
 
         with open(file_path, encoding="utf-8") as f:
@@ -79,7 +76,6 @@ def safe_json_load(file_path: Path) -> Optional[dict[str, Any]]:
         print(f"DEBUG: Error with utf-8 encoding: {e}")
         # Try with different encoding
         try:
-
             with open(file_path, encoding="latin-1") as f:
                 data = json.load(f)
 

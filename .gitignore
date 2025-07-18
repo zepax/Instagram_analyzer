@@ -178,7 +178,21 @@ mi_analisis_personalizado
 
 # Logs
 logs/
+final_analysis/
+reporte_datos_reales_output/
+test_output/
+test_real_export/
+instagram_analysis/
+backup/
+output/
+*.bak
 *.log
+*.tmp
+*.html
+2025-*-session*.txt
+codex_branches.txt
+DAILY_PROGRESS_*.md
+CLAUDE.md
 
 # Temporary files
 *.tmp

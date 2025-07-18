@@ -60,7 +60,7 @@ class CacheManager:
                 self.config.disk_cache_enabled = False
 
         # Cache warming queue
-        self._warming_queue: List[str] = []
+        self._warming_queue: list[str] = []
         self._warming_thread: Optional[threading.Thread] = None
 
         if self.config.cache_warming_enabled:
@@ -267,7 +267,7 @@ class CacheManager:
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
 
-    def keys(self, include_memory: bool = True, include_disk: bool = True) -> Set[str]:
+    def keys(self, include_memory: bool = True, include_disk: bool = True) -> set[str]:
         """Get all cache keys from specified layers.
 
         Args:
@@ -291,7 +291,7 @@ class CacheManager:
 
         return all_keys
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get comprehensive cache statistics.
 
         Returns:
@@ -332,7 +332,7 @@ class CacheManager:
 
         return stats
 
-    def warm_cache(self, keys: List[str], loader_func: Callable[[str], Any]) -> int:
+    def warm_cache(self, keys: list[str], loader_func: Callable[[str], Any]) -> int:
         """Warm cache with pre-loaded data.
 
         Args:

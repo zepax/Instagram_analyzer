@@ -127,30 +127,30 @@ class DataDetector:
         if path_parts == ["personal_information", "personal_information.json"]:
             structure["profile_files"].append(file_path)
             return
-        elif path_parts == ["personal_information", "personal_information", "personal_information.json"]:
+        elif path_parts == [
+            "personal_information",
+            "personal_information",
+            "personal_information.json",
+        ]:
             structure["profile_files"].append(file_path)
             return
 
         # --- Content Files (Posts, Stories, Reels) ---
         if path_parts == ["your_instagram_activity", "media", "posts_1.json"]:
             if self._is_posts_file(file_path):
-
                 structure["post_files"].append(file_path)
                 return
         elif path_parts == ["your_instagram_activity", "media", "stories.json"]:
             if self._is_stories_file(file_path):
-
                 structure["story_files"].append(file_path)
                 return
         elif path_parts == ["your_instagram_activity", "media", "reels.json"]:
             if self._is_reels_file(file_path):
-
                 structure["reel_files"].append(file_path)
                 return
 
         # --- Archived and Deleted Content ---
         if path_parts == ["your_instagram_activity", "media", "archived_posts.json"]:
-
             structure["archived_post_files"].append(file_path)
             return
         elif path_parts == [
@@ -158,7 +158,6 @@ class DataDetector:
             "media",
             "recently_deleted_content.json",
         ]:
-
             structure["recently_deleted_files"].append(file_path)
             return
 
@@ -174,7 +173,6 @@ class DataDetector:
         # --- Engagement Files ---
         if path_parts == ["your_instagram_activity", "likes", "liked_posts.json"]:
             if self._is_engagement_file(file_path, "liked_posts"):
-
                 structure["engagement_files"]["liked_posts"].append(file_path)
                 return
         elif (
@@ -182,7 +180,6 @@ class DataDetector:
             and "post_comments" in filename
         ):
             if self._is_engagement_file(file_path, "post_comments"):
-
                 structure["engagement_files"]["post_comments"].append(file_path)
                 return
         elif (
@@ -190,7 +187,6 @@ class DataDetector:
             and "reels_comments" in filename
         ):
             if self._is_engagement_file(file_path, "reel_comments"):
-
                 structure["engagement_files"]["reel_comments"].append(file_path)
                 return
 

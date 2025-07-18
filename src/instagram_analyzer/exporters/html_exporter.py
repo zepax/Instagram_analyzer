@@ -115,7 +115,11 @@ class HTMLExporter:
             return report_file
 
     def _generate_report_data(
-        self, analyzer: Any, anonymize: bool, compact: bool = False, max_items: int = 100
+        self,
+        analyzer: Any,
+        anonymize: bool,
+        compact: bool = False,
+        max_items: int = 100,
     ) -> dict[str, Any]:
         """Generate comprehensive report data."""
         data = {

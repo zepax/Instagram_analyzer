@@ -522,7 +522,6 @@ class InstagramAnalyzer:
 
         for file_path in story_files:
             try:
-
                 # Use streaming parser for memory efficiency
                 stories = self.parser.parse_stories_from_file(str(file_path))
 
@@ -533,7 +532,6 @@ class InstagramAnalyzer:
                 else:
                     self._stories_list.extend(stories)
             except Exception:
-
                 import traceback
 
                 traceback.print_exc()
