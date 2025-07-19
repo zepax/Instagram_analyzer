@@ -1,6 +1,6 @@
 """Instagram Analyzer - Advanced Instagram data analysis tool."""
 
-__version__ = "0.2.08"
+__version__ = "0.2.09"
 __author__ = "Instagram Analyzer Team"
 __email__ = "team@instagram-analyzer.com"
 

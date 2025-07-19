@@ -104,13 +104,46 @@ jobs:
                 taskContext.reviewDepth = body.toLowerCase().includes('deep') ? 'deep' : 'normal';
               }
 
-              // Detectar módulos mencionados
-              const modules = ['cache', 'parser', 'analyzer', 'exporter', 'ml', 'network', 'config', 'utils'];
-              modules.forEach(module => {
+              // Análisis para seguridad
+              if (body.toLowerCase().includes('security') ||
+                  body.toLowerCase().includes('seguridad') ||
+                  body.toLowerCase().includes('vulnerability') ||
+                  body.toLowerCase().includes('vulnerabilidad') ||
+                  body.toLowerCase().includes('exploit') ||
+                  body.toLowerCase().includes('cve')) {
+                labels.push('ai:security');
+                taskContext.securityScope = body.toLowerCase().includes('full') ? 'comprehensive' : 'standard';
+              }
+
+              // Detectar módulos mencionados con mapeo específico
+              const componentMap = {
+                'web': 'src/instagram_analyzer/web/',
+                'mcp': 'src/instagram_analyzer/mcp/',
+                'cache': 'src/instagram_analyzer/cache/',
+                'ml': 'src/instagram_analyzer/ml/',
+                'parser': 'src/instagram_analyzer/parsers/',
+                'analyzer': 'src/instagram_analyzer/analyzers/',
+                'exporter': 'src/instagram_analyzer/exporters/',
+                'network': 'src/instagram_analyzer/analyzers/network_analysis.py',
+                'config': 'src/instagram_analyzer/config/',
+                'utils': 'src/instagram_analyzer/utils/'
+              };
+
+              Object.keys(componentMap).forEach(module => {
                 if (body.toLowerCase().includes(module)) {
                   taskContext.targetModule = module;
+                  taskContext.targetPath = componentMap[module];
                 }
               });
+
+              // Detectar dependencias entre agentes
+              taskContext.agentDependencies = [];
+              if (labels.includes('ai:feature')) {
+                taskContext.agentDependencies.push('ai:test', 'ai:docs');
+              }
+              if (labels.includes('ai:optimize')) {
+                taskContext.agentDependencies.push('ai:test');
+              }
             }
 
             // Si encontramos etiquetas, aplicarlas
@@ -149,8 +182,36 @@ jobs:
           echo "Assigned labels: ${{ steps.analyze.outputs.assigned_labels || 'none' }}"
           echo "Task context: ${{ steps.analyze.outputs.task_context || '{}' }}"
 
-  notify-agents:
+  setup-shared-context:
     needs: triage
+    if: needs.triage.outputs.assigned_labels != ''
+    runs-on: ubuntu-latest
+    outputs:
+      context-key: ${{ steps.context.outputs.context-key }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup shared context store
+        id: context
+        run: |
+          CONTEXT_KEY="ai-context-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}"
+          echo "context-key=$CONTEXT_KEY" >> $GITHUB_OUTPUT
+
+          # Crear archivo de contexto compartido
+          mkdir -p .task-context
+          echo '${{ needs.triage.outputs.task_context }}' > .task-context/context.json
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .task-context/created_at.txt
+          echo "orchestrator" > .task-context/last_updated_by.txt
+
+      - name: Cache task context
+        uses: actions/cache/save@v3
+        with:
+          path: .task-context
+          key: ${{ steps.context.outputs.context-key }}
+
+  notify-agents:
+    needs: [triage, setup-shared-context]
     if: needs.triage.outputs.assigned_labels != ''
     runs-on: ubuntu-latest
     steps:
@@ -170,7 +231,8 @@ jobs:
               ref: context.ref,
               inputs: {
                 context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
+                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
               }
             });
             console.log('Documentation agent triggered');
@@ -188,7 +250,8 @@ jobs:
               ref: context.ref,
               inputs: {
                 context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
+                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
               }
             });
             console.log('Testing agent triggered');
@@ -206,7 +269,8 @@ jobs:
               ref: context.ref,
               inputs: {
                 context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
+                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
               }
             });
             console.log('Optimization agent triggered');
@@ -224,7 +288,8 @@ jobs:
               ref: context.ref,
               inputs: {
                 context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
+                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
               }
             });
             console.log('Feature agent triggered');
@@ -242,7 +307,112 @@ jobs:
               ref: context.ref,
               inputs: {
                 context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
+                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
               }
             });
             console.log('Review agent triggered');
+
+      - name: Trigger security agent
+        if: contains(needs.triage.outputs.assigned_labels, 'ai:security')
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-security-agent.yml',
+              ref: context.ref,
+              inputs: {
+                context: ${{ toJSON(needs.triage.outputs.task_context) }},
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
+                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
+              }
+            });
+            console.log('Security agent triggered');
+
+  collect-results:
+    needs: [triage, setup-shared-context, notify-agents]
+    if: always() && needs.triage.outputs.assigned_labels != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore shared context
+        uses: actions/cache/restore@v3
+        with:
+          path: .task-context
+          key: ${{ needs.setup-shared-context.outputs.context-key }}
+
+      - name: Wait for agent completion
+        run: |
+          echo "⏳ Waiting for specialized agents to complete..."
+          sleep 30  # Give agents time to start
+
+      - name: Aggregate agent results
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = context.payload.issue ? context.payload.issue.number :
+                              (context.payload.pull_request ? context.payload.pull_request.number : null);
+
+            if (!issueNumber) {
+              console.log('No issue/PR to update');
+              return;
+            }
+
+            // Crear resumen de resultados
+            let summary = `## 🤖 Multi-Agent Task Summary\n\n`;
+            summary += `**Orchestrator ID**: \`${{ github.run_id }}\`\n`;
+            summary += `**Context Key**: \`${{ needs.setup-shared-context.outputs.context-key }}\`\n`;
+            summary += `**Assigned Labels**: ${{ needs.triage.outputs.assigned_labels }}\n\n`;
+
+            // Agregar estado de agentes activados
+            const labels = '${{ needs.triage.outputs.assigned_labels }}'.split(',');
+            summary += `### Activated Agents:\n`;
+
+            if (labels.includes('ai:docs')) {
+              summary += `- 📚 **Documentation Agent**: Processing documentation updates\n`;
+            }
+            if (labels.includes('ai:test')) {
+              summary += `- 🧪 **Testing Agent**: Implementing tests\n`;
+            }
+            if (labels.includes('ai:optimize')) {
+              summary += `- ⚡ **Optimization Agent**: Analyzing performance\n`;
+            }
+            if (labels.includes('ai:feature')) {
+              summary += `- 🚀 **Feature Agent**: Developing new functionality\n`;
+            }
+            if (labels.includes('ai:review')) {
+              summary += `- 👁️ **Review Agent**: Conducting code review\n`;
+            }
+            if (labels.includes('ai:security')) {
+              summary += `- 🔒 **Security Agent**: Analyzing security vulnerabilities\n`;
+            }
+
+            summary += `\n### Next Steps:\n`;
+            summary += `- Specialized agents will create detailed analysis and PRs\n`;
+            summary += `- Track progress in the [Actions tab](https://github.com/${{ github.repository }}/actions)\n`;
+            summary += `- Agent results will be updated in this issue\n\n`;
+            summary += `*Orchestrated by Multi-Agent System v2.0*`;
+
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+            // Generar step summary
+            core.summary.addHeading('🤖 Multi-Agent Orchestration Complete');
+            core.summary.addTable([
+              [{data: 'Metric', header: true}, {data: 'Value', header: true}],
+              ['Issue/PR', `#${issueNumber}`],
+              ['Labels Assigned', '${{ needs.triage.outputs.assigned_labels }}'],
+              ['Context Key', '${{ needs.setup-shared-context.outputs.context-key }}'],
+              ['Agents Activated', labels.length.toString()]
+            ]);
+            await core.summary.write();

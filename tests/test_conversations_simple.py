@@ -25,19 +25,103 @@ def conversations_dir(tmp_path_factory):
             {
                 "sender_name": "Alice Doe",
                 "timestamp_ms": 1701879445369,
-                "content": "Por los colores",
+                "content": "Hola! ¿Cómo estás?",
+                "type": "Generic",
                 "is_geoblocked_for_viewer": False,
                 "is_unsent_image_by_messenger_kid_parent": False,
-            }
+            },
+            {
+                "sender_name": "John Doe",
+                "timestamp_ms": 1701879446000,
+                "content": "¡Bien! ¿Y tú?",
+                "type": "Generic",
+                "is_geoblocked_for_viewer": False,
+                "is_unsent_image_by_messenger_kid_parent": False,
+                "reactions": [{"reaction": "❤️", "actor": "Alice Doe"}],
+            },
+            {
+                "sender_name": "Alice Doe",
+                "timestamp_ms": 1701879447000,
+                "content": "Todo bien, trabajando en un proyecto",
+                "type": "Generic",
+                "is_geoblocked_for_viewer": False,
+                "is_unsent_image_by_messenger_kid_parent": False,
+            },
+            {
+                "sender_name": "John Doe",
+                "timestamp_ms": 1701879500000,
+                "photos": [
+                    {
+                        "uri": "messages/inbox/conv1/photos/sample_photo.jpg",
+                        "creation_timestamp": 1701879500000,
+                    }
+                ],
+                "type": "Generic",
+                "is_geoblocked_for_viewer": False,
+                "is_unsent_image_by_messenger_kid_parent": False,
+            },
         ],
         "title": "John & Alice",
         "is_still_participant": True,
-        "thread_path": "inbox/1295475635182545",
+        "thread_path": "inbox/conv1",
         "magic_words": [],
+        "joinable_mode": None,
     }
     msg_file.write_text(
         json.dumps(test_data, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+
+    # Crear una segunda conversación grupal
+    conv_dir2 = inbox / "grupo_proyecto"
+    conv_dir2.mkdir()
+    msg_file2 = conv_dir2 / "message_1.json"
+    test_data2 = {
+        "participants": [
+            {"name": "John Doe"},
+            {"name": "Alice Doe"},
+            {"name": "Carlos Martinez"},
+            {"name": "Sofia Lopez"},
+        ],
+        "messages": [
+            {
+                "sender_name": "Carlos Martinez",
+                "timestamp_ms": 1701880000000,
+                "content": "Hola equipo! ¿Listos para la presentación?",
+                "type": "Generic",
+                "is_geoblocked_for_viewer": False,
+                "is_unsent_image_by_messenger_kid_parent": False,
+            },
+            {
+                "sender_name": "Sofia Lopez",
+                "timestamp_ms": 1701880100000,
+                "content": "Sí! Ya tengo los slides listos",
+                "type": "Generic",
+                "is_geoblocked_for_viewer": False,
+                "is_unsent_image_by_messenger_kid_parent": False,
+                "reactions": [
+                    {"reaction": "👍", "actor": "John Doe"},
+                    {"reaction": "👍", "actor": "Alice Doe"},
+                ],
+            },
+            {
+                "sender_name": "Alice Doe",
+                "timestamp_ms": 1701880200000,
+                "content": "Perfecto! Nos vemos mañana",
+                "type": "Generic",
+                "is_geoblocked_for_viewer": False,
+                "is_unsent_image_by_messenger_kid_parent": False,
+            },
+        ],
+        "title": "Proyecto Final - Equipo 3",
+        "is_still_participant": True,
+        "thread_path": "inbox/grupo_proyecto",
+        "magic_words": [],
+        "joinable_mode": {"mode": 1, "link": "https://ig.me/j/example"},
+    }
+    msg_file2.write_text(
+        json.dumps(test_data2, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
     return base
 
 

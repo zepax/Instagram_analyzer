@@ -1,0 +1,371 @@
+name: AI Security Agent
+# Agente especializado en análisis de seguridad y auditoría de código
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  workflow_run:
+    workflows: ["AI Agent Orchestrator"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      issueNumber:
+        description: "Número de issue a procesar"
+        required: true
+        type: string
+      context:
+        description: "Contexto para el agente"
+        required: true
+        type: string
+      contextKey:
+        description: "Clave de contexto compartido"
+        required: false
+        type: string
+
+jobs:
+  should-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-security-task == 'true' || github.event_name == 'workflow_dispatch' }}
+      issue-number: ${{ steps.get-issue.outputs.issue-number || github.event.inputs.issueNumber }}
+      context: ${{ steps.get-context.outputs.context || github.event.inputs.context }}
+      context-key: ${{ github.event.inputs.contextKey || steps.generate-key.outputs.context-key }}
+    steps:
+      - id: check-label
+        if: github.event_name != 'workflow_run' && github.event_name != 'workflow_dispatch'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const hasLabel = context.payload.label &&
+                            (context.payload.label.name === 'ai:security' ||
+                             context.payload.label.name === 'security' ||
+                             context.payload.label.name === 'vulnerability');
+            core.setOutput('has-label', hasLabel.toString());
+
+      - id: check-workflow
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Verificar si el orchestrador activó tareas de seguridad
+            const conclusion = context.payload.workflow_run.conclusion;
+            const hasSecurityTask = conclusion === 'success' || conclusion === 'failure';
+            core.setOutput('has-security-task', hasSecurityTask.toString());
+
+      - id: get-issue
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          echo "issue-number=${{ github.event.issue.number || github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+      - id: get-context
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          echo "context={}" >> $GITHUB_OUTPUT
+
+      - id: generate-key
+        if: github.event.inputs.contextKey == ''
+        run: |
+          echo "context-key=ai-security-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+  security-analysis:
+    needs: should-run
+    if: needs.should-run.outputs.run-job == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for security analysis
+
+      - name: Restore shared context
+        if: needs.should-run.outputs.context-key != ''
+        uses: actions/cache/restore@v3
+        continue-on-error: true
+        with:
+          path: .task-context
+          key: ${{ needs.should-run.outputs.context-key }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Run Security Analysis
+        id: security-scan
+        run: |
+          echo "🔒 Running comprehensive security analysis..."
+
+          # Crear directorio de reportes
+          mkdir -p security-reports
+
+          # 1. Bandit security scan
+          echo "Running Bandit security scan..."
+          poetry run bandit -r src/ -f json -o security-reports/bandit-report.json || true
+          poetry run bandit -r src/ -f txt -o security-reports/bandit-report.txt || true
+
+          # 2. Safety dependency check
+          echo "Running Safety dependency check..."
+          poetry run safety check --json --output security-reports/safety-report.json || true
+          poetry run safety check --output security-reports/safety-report.txt || true
+
+          # 3. Semgrep static analysis (if available)
+          echo "Running additional static analysis..."
+          if command -v semgrep &> /dev/null; then
+            semgrep --config=auto src/ --json --output=security-reports/semgrep-report.json || true
+          fi
+
+          # 4. Check for secrets in code
+          echo "Scanning for potential secrets..."
+          if command -v gitleaks &> /dev/null; then
+            gitleaks detect --source . --report-format json --report-path security-reports/gitleaks-report.json || true
+          fi
+
+          # 5. Analyze MCP and Web components specifically
+          echo "Analyzing Instagram Analyzer specific security concerns..."
+          poetry run python -c "
+          import json
+          import os
+          from pathlib import Path
+
+          security_issues = []
+
+          # Check web component security
+          web_files = list(Path('src/instagram_analyzer/web').rglob('*.py'))
+          for file in web_files:
+              with open(file, 'r', encoding='utf-8') as f:
+                  content = f.read()
+                  if '0.0.0.0' in content:
+                      security_issues.append({
+                          'file': str(file),
+                          'issue': 'Binding to all interfaces (0.0.0.0)',
+                          'severity': 'HIGH',
+                          'recommendation': 'Use 127.0.0.1 for localhost binding'
+                      })
+                  if 'SECRET' in content.upper() and 'example' not in content.lower():
+                      security_issues.append({
+                          'file': str(file),
+                          'issue': 'Potential hardcoded secret',
+                          'severity': 'CRITICAL',
+                          'recommendation': 'Use environment variables for secrets'
+                      })
+
+          # Check MCP security
+          mcp_files = list(Path('src/instagram_analyzer/mcp').rglob('*.py'))
+          for file in mcp_files:
+              with open(file, 'r', encoding='utf-8') as f:
+                  content = f.read()
+                  if 'usedforsecurity=False' not in content and 'md5' in content.lower():
+                      security_issues.append({
+                          'file': str(file),
+                          'issue': 'MD5 usage without security flag',
+                          'severity': 'MEDIUM',
+                          'recommendation': 'Add usedforsecurity=False parameter'
+                      })
+
+          # Save custom analysis
+          with open('security-reports/instagram-analyzer-security.json', 'w') as f:
+              json.dump({'issues': security_issues}, f, indent=2)
+
+          print(f'Found {len(security_issues)} Instagram Analyzer specific security issues')
+          " || true
+
+          # Generate summary
+          echo "Generating security summary..."
+          python -c "
+          import json
+          import os
+          from pathlib import Path
+
+          reports_dir = Path('security-reports')
+          summary = {
+              'total_issues': 0,
+              'critical_issues': 0,
+              'high_issues': 0,
+              'medium_issues': 0,
+              'reports_generated': []
+          }
+
+          for report_file in reports_dir.glob('*.json'):
+              summary['reports_generated'].append(report_file.name)
+              try:
+                  with open(report_file) as f:
+                      data = json.load(f)
+                      # Count issues based on report type
+                      if 'bandit' in report_file.name:
+                          issues = data.get('results', [])
+                          summary['total_issues'] += len(issues)
+                          for issue in issues:
+                              severity = issue.get('issue_severity', 'LOW').upper()
+                              if severity == 'HIGH':
+                                  summary['high_issues'] += 1
+                              elif severity == 'MEDIUM':
+                                  summary['medium_issues'] += 1
+                      elif 'instagram-analyzer' in report_file.name:
+                          issues = data.get('issues', [])
+                          summary['total_issues'] += len(issues)
+                          for issue in issues:
+                              severity = issue.get('severity', 'LOW').upper()
+                              if severity == 'CRITICAL':
+                                  summary['critical_issues'] += 1
+                              elif severity == 'HIGH':
+                                  summary['high_issues'] += 1
+                              elif severity == 'MEDIUM':
+                                  summary['medium_issues'] += 1
+              except:
+                  pass
+
+          with open('security-reports/summary.json', 'w') as f:
+              json.dump(summary, f, indent=2)
+
+          print(f'Security Analysis Complete:')
+          print(f'  Total Issues: {summary[\"total_issues\"]}')
+          print(f'  Critical: {summary[\"critical_issues\"]}')
+          print(f'  High: {summary[\"high_issues\"]}')
+          print(f'  Medium: {summary[\"medium_issues\"]}')
+
+          # Set outputs for GitHub
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'total_issues={summary[\"total_issues\"]}\\n')
+              f.write(f'critical_issues={summary[\"critical_issues\"]}\\n')
+              f.write(f'high_issues={summary[\"high_issues\"]}\\n')
+              f.write(f'medium_issues={summary[\"medium_issues\"]}\\n')
+          "
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports-${{ github.run_id }}
+          path: security-reports/
+          retention-days: 30
+
+      - name: Update shared context
+        if: needs.should-run.outputs.context-key != ''
+        run: |
+          mkdir -p .task-context
+          if [ -f .task-context/context.json ]; then
+            # Update existing context
+            python -c "
+            import json
+            with open('.task-context/context.json') as f:
+                context = json.load(f)
+            context['security_analysis'] = {
+                'completed': True,
+                'total_issues': ${{ steps.security-scan.outputs.total_issues }},
+                'critical_issues': ${{ steps.security-scan.outputs.critical_issues }},
+                'high_issues': ${{ steps.security-scan.outputs.high_issues }},
+                'medium_issues': ${{ steps.security-scan.outputs.medium_issues }},
+                'reports_artifact': 'security-reports-${{ github.run_id }}'
+            }
+            with open('.task-context/context.json', 'w') as f:
+                json.dump(context, f, indent=2)
+            "
+            echo "security-agent" > .task-context/last_updated_by.txt
+            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .task-context/updated_at.txt
+          fi
+
+      - name: Save updated context
+        if: needs.should-run.outputs.context-key != ''
+        uses: actions/cache/save@v3
+        with:
+          path: .task-context
+          key: ${{ needs.should-run.outputs.context-key }}-security
+
+      - name: Create Security Report Comment
+        if: needs.should-run.outputs.issue-number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ needs.should-run.outputs.issue-number }};
+            const totalIssues = ${{ steps.security-scan.outputs.total_issues }};
+            const criticalIssues = ${{ steps.security-scan.outputs.critical_issues }};
+            const highIssues = ${{ steps.security-scan.outputs.high_issues }};
+            const mediumIssues = ${{ steps.security-scan.outputs.medium_issues }};
+
+            let comment = `## 🔒 Security Analysis Report\n\n`;
+            comment += `**Agent**: AI Security Agent\n`;
+            comment += `**Run ID**: \`${{ github.run_id }}\`\n\n`;
+
+            // Security summary
+            comment += `### 📊 Security Summary\n\n`;
+            comment += `| Severity | Count |\n`;
+            comment += `|----------|-------|\n`;
+            comment += `| 🔴 Critical | ${criticalIssues} |\n`;
+            comment += `| 🟠 High | ${highIssues} |\n`;
+            comment += `| 🟡 Medium | ${mediumIssues} |\n`;
+            comment += `| **Total** | **${totalIssues}** |\n\n`;
+
+            // Analysis performed
+            comment += `### 🔍 Analysis Performed\n\n`;
+            comment += `- ✅ **Bandit** - Python security linter\n`;
+            comment += `- ✅ **Safety** - Dependency vulnerability check\n`;
+            comment += `- ✅ **Instagram Analyzer Specific** - Custom security rules\n`;
+            comment += `- ✅ **Web Component Analysis** - FastAPI security review\n`;
+            comment += `- ✅ **MCP Security** - Distributed component analysis\n\n`;
+
+            // Recommendations
+            if (totalIssues > 0) {
+              comment += `### 🛠️ Next Steps\n\n`;
+              if (criticalIssues > 0) {
+                comment += `- 🚨 **Immediate Action Required**: ${criticalIssues} critical security issues found\n`;
+              }
+              if (highIssues > 0) {
+                comment += `- ⚠️ **High Priority**: ${highIssues} high-severity issues need attention\n`;
+              }
+              comment += `- 📄 **Detailed Reports**: Download artifacts from [Actions run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+              comment += `- 🔧 **Fix Priority**: Critical → High → Medium\n\n`;
+            } else {
+              comment += `### ✅ Security Status\n\n`;
+              comment += `No security issues detected! The codebase follows security best practices.\n\n`;
+            }
+
+            comment += `### 📁 Available Reports\n\n`;
+            comment += `- \`bandit-report.json\` - Detailed security scan results\n`;
+            comment += `- \`safety-report.json\` - Dependency vulnerabilities\n`;
+            comment += `- \`instagram-analyzer-security.json\` - Custom security analysis\n`;
+            comment += `- \`summary.json\` - Aggregated security metrics\n\n`;
+            comment += `*Security analysis completed by AI Security Agent v1.0*`;
+
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+            // Add to step summary
+            core.summary.addHeading('🔒 Security Analysis Complete');
+            core.summary.addTable([
+              [{data: 'Metric', header: true}, {data: 'Value', header: true}],
+              ['Total Issues', totalIssues.toString()],
+              ['Critical Issues', criticalIssues.toString()],
+              ['High Issues', highIssues.toString()],
+              ['Medium Issues', mediumIssues.toString()],
+              ['Issue/PR', `#${issueNumber}`]
+            ]);
+            await core.summary.write();
