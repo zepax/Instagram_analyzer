@@ -3,8 +3,15 @@
 # See docs/CONSOLIDATED_WORKFLOW.md for more information
 
 
+
+
 on:
   workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Rama o tag de destino para el workflow principal'
+        required: false
+        default: ''
 
 permissions:
   actions: write
@@ -17,18 +24,41 @@ jobs:
       - name: Redirect to main workflow
         run: echo "This workflow has been consolidated into main-workflow.yml. Please use that workflow instead."
 
+      - name: Get latest version tag
+        id: get-latest-tag
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tags = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            const versionTags = tags.data
+              .map(t => t.name)
+              .filter(name => /^v\d+\.\d+\.\d+/.test(name))
+              .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+            const latest = versionTags[0];
+            if (!latest) throw new Error('No se encontró ningún tag de versión vX.Y.Z en el repositorio.');
+            core.setOutput('latest_tag', latest);
+
       - name: Trigger main workflow
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const ref = process.env.INPUT_TARGET_REF || process.env.LATEST_TAG;
+            if (!ref) throw new Error('No se encontró ref de destino (ni input ni tag de versión).');
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'main-workflow.yml',
-              ref: 'v0.2.05',
+              ref,
               inputs: {
                 task_type: 'review',
                 target_module: ''
               }
             });
+        env:
+          LATEST_TAG: ${{ steps.get-latest-tag.outputs.latest_tag }}
