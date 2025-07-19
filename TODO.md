@@ -95,12 +95,25 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
   - [ ] Configurar coverage para todo src/instagram_analyzer/ (actualmente solo 3 archivos)
   - [x] ✅ Limpiar archivos de test redundantes (*_backup.py, *_clean.py)
   - [x] ✅ Auditoría y mapeo completo del repositorio y suite de tests (julio 2025)
-  - [x] ✅ Confirmada cobertura básica para `NetworkAnalyzer` (test existente)
+  - [x] ✅ Mejorada cobertura para `NetworkAnalyzer` (73.53% coverage) **ACTUALIZADO 19 JULIO 2025**
+    - [x] ✅ Test con datos reales anonimizados para `NetworkAnalyzer`
+    - [x] ✅ Verificación de followers/following en grafos de red
   - [ ] Tests avanzados/edge para exporters (PDF, casos avanzados)
   - [ ] Tests avanzados para conversation analyzer
   - [ ] Tests avanzados para `NetworkAnalyzer` (edge cases, integración)
 
-- [x] ✅ **HIGH** Mejorar manejo de errores **COMPLETADO**
+
+  - [x] ✅ **HIGH** Mejorar manejo de errores **COMPLETADO**
+  - [x] ✅ JULIO 2025: Parsers y tests ahora lanzan y validan excepciones explícitas (ej: FileNotFoundError), siguiendo mejores prácticas de robustez y claridad.
+  - [x] ✅ JULIO 2025: Refactorización y robustecimiento de tests de parsers y análisis de conversaciones:
+    - [x] Tests ahora usan datos realistas y anonimizados, generados por fixture.
+    - [x] Suite de tests completamente autónoma y portable (no depende de archivos externos).
+    - [x] Manejo robusto de errores: los parsers lanzan excepciones explícitas y los tests las validan.
+    - [x] Limpieza de imports y cumplimiento estricto de PEP8/lint en los tests principales.
+    - [x] Confirmada cobertura y robustez para `conversation_parser.py` y tests asociados.
+  - [x] ✅ **JULIO 2025**: Todos los tests de parsers principales y análisis de conversaciones pasan correctamente tras refactorización y limpieza.
+  - [x] ✅ Limpieza y reparación de imports, estructura y sintaxis en los tests principales (tests de conversación y parsers).
+  - [x] ✅ Confirmada cobertura robusta y portable para `ConversationParser` y análisis de conversaciones.
 
   - [x] ✅ Crear custom exceptions jerárquicas (40+ exception classes implementadas)
   - [x] ✅ Implementar retry logic para operaciones de I/O (exponential backoff + circuit breaker)
@@ -224,13 +237,13 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
   - [x] ✅ Predicción de engagement y tendencias
   - [x] ✅ Análisis temporal y correlación de métricas
 
-- [ ] **HIGH** Business Intelligence
+- [ ] **MEDIUM** Personal Analytics Dashboard (Individual Focus)
 
-  - [ ] KPI personalizables para análisis empresarial
-  - [ ] Dashboard analítico con métricas clave
-  - [ ] Reports automatizados para stakeholders
-  - [ ] Benchmarking contra datos históricos
-  - [ ] Alertas y triggers basados en umbrales
+  - [ ] Métricas personales para autoconocimiento digital
+  - [ ] Dashboard personal con insights sobre comportamiento propio
+  - [ ] Comparaciones con patrones históricos personales
+  - [ ] Análisis de tendencias personales de engagement
+  - [ ] Insights sobre frecuencia y patrones de uso personal
 
 ### 🔍 Advanced Conversation Analysis
 
@@ -241,30 +254,33 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
   - [ ] Conversation quality metrics
   - [ ] Response time pattern analysis
 
-- [ ] **LOW** Social network analysis
-  - [ ] Interaction graphs
+- [x] ✅ **LOW** Social network analysis **COMPLETADO 19 JULIO 2025**
+  - [x] ✅ Interaction graphs (implementado en NetworkAnalyzer)
+  - [x] ✅ Follower/following relationships (añadido soporte en NetworkAnalyzer)
   - [ ] Influence metrics
   - [ ] Community detection
   - [ ] Network centrality measures
 
 ---
 
-## 🎨 Phase 4: User Experience & Visualization (Sprint 7-8)
+## 🎨 Phase 4: Personal Web Interface & Visualization (Sprint 7-8) ✅ **COMPLETADO 100%**
 
-### 🌐 Web Interface
+### 🌐 Personal Web Dashboard (Individual/Hobbyist Focus) ✅ **COMPLETADO 19 JULIO 2025**
 
-- [ ] **HIGH** Interactive web dashboard
+- [x] ✅ **HIGH** Interactive personal web dashboard **COMPLETADO**
 
-  - [ ] FastAPI backend
-  - [ ] React/Vue frontend
-  - [ ] Real-time updates with WebSockets
-  - [ ] Responsive design
+  - [x] ✅ FastAPI backend simple para análisis personal
+  - [x] ✅ Frontend vanilla JS ligero y amigable para usuarios casuales
+  - [x] ✅ Drag & drop para archivos de export de Instagram
+  - [x] ✅ Procesamiento en tiempo real con progress bars web
+  - [x] ✅ Diseño responsive y fácil de usar
 
-- [ ] **MEDIUM** Advanced visualizations
-  - [ ] D3.js interactive charts
-  - [ ] Timeline visualizations
-  - [ ] Network graphs
-  - [ ] Heatmaps and calendars
+- [x] ✅ **HIGH** Personal Data Visualizations **COMPLETADO**
+  - [x] ✅ D3.js interactive charts para datos personales
+  - [x] ✅ Timeline de actividad personal en Instagram
+  - [x] ✅ Network graph de amigos/interacciones personales
+  - [x] ✅ Heatmaps de actividad personal y patrones temporales
+  - [x] ✅ Análisis visual de sentiment personal en posts/comments
 
 ### 📊 Export Enhancements
 
@@ -449,11 +465,59 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
 
 ---
 
-## 🚀 Phase 7: Enterprise & Advanced Features (Sprint 12+) 🆕 **NUEVA FASE**
+## 🚀 Phase 7: Advanced Personal Features (Sprint 12+) 🆕 **CURRENT FOCUS: INDIVIDUAL**
 
-### 🤖 AI/ML Advanced Features
+### 🤖 AI/ML Personal Enhancement Features
 
-- [ ] **HIGH** Data Mining Foundation
+- [ ] **MEDIUM** Personal Content Analysis
+
+  - [ ] Análisis personal de patrones de contenido
+  - [ ] Clasificación automática de tipos de posts personales
+  - [ ] Búsqueda semántica en contenido personal
+  - [ ] Categorización personal de intereses y temas
+  - [ ] Timeline personal con contexto enriquecido
+
+- [ ] **MEDIUM** Personal Insights Engine
+
+  - [ ] Predicciones de engagement personal
+  - [ ] Recomendaciones para mejorar engagement personal
+  - [ ] Análisis de mejores horarios personales para postear
+  - [ ] Insights sobre evolución personal en redes sociales
+  - [ ] Análisis de conexiones personales más significativas
+
+- [ ] **LOW** Computer Vision & Personal Media
+
+  - [ ] Análisis de contenido visual personal
+  - [ ] Clasificación automática de fotos personales
+  - [ ] Detección de objetos en fotos personales
+  - [ ] Análisis de paletas de color en contenido personal
+  - [ ] Timeline visual de evolución de contenido
+
+- [ ] **LOW** Personal AI Assistant
+  - [ ] Chatbot para consultas sobre datos personales
+  - [ ] Generación de insights personalizados
+  - [ ] Asistente para explorar patrones personales
+  - [ ] Sugerencias personalizadas de contenido
+  - [ ] Análisis conversacional de datos personales
+
+### 🌐 Personal Mobile Experience
+
+- [ ] **LOW** Personal mobile app
+  - [ ] React Native/Flutter app para análisis personal
+  - [ ] Interfaz mobile-optimizada para usuarios individuales
+  - [ ] Análisis offline de datos personales
+  - [ ] Notificaciones de insights personales
+
+---
+
+## 🏢 Phase 8: Enterprise & Advanced Features (Sprint 20+) 📋 **FUTURE: ENTERPRISE PIVOT**
+
+> **NOTA**: Esta fase representa una evolución futura hacia capacidades empresariales.
+> Actualmente el proyecto está enfocado en usuarios individuales/hobbyistas.
+
+### 🤖 AI/ML Enterprise Features (FUTURO)
+
+- [ ] **FUTURE** Data Mining Foundation
 
   - [ ] Sistema escalable de extracción de datos (endpoints adicionales)
   - [ ] Normalización avanzada de datos heterogéneos
@@ -461,7 +525,7 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
   - [ ] Clasificadores multi-etiqueta para contenido
   - [ ] Pipeline ETL completo con validación
 
-- [ ] **HIGH** Predictive Analytics Engine
+- [ ] **FUTURE** Enterprise Predictive Analytics
 
   - [ ] Modelos avanzados de forecasting (Prophet, ARIMA, LSTM)
   - [ ] Análisis prescriptivo con recomendaciones accionables
@@ -469,28 +533,22 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
   - [ ] Optimización multiparamétrica para estrategias de contenido
   - [ ] Análisis de cohortes automatizado con insights
 
-- [ ] **MEDIUM** Computer Vision & Multimedia
+- [ ] **FUTURE** Enterprise Business Intelligence
 
-  - [ ] Análisis de contenido visual con modelos pre-entrenados
-  - [ ] Reconocimiento facial con anonimización integrada
-  - [ ] Clasificación de objetos y escenas en imágenes
-  - [ ] Detección de logos, marcas y productos
-  - [ ] Análisis de paletas de color y estética visual
+  - [ ] KPI personalizables para análisis empresarial
+  - [ ] Dashboard analítico con métricas clave empresariales
+  - [ ] Reports automatizados para stakeholders
+  - [ ] Benchmarking contra datos históricos
+  - [ ] Alertas y triggers basados en umbrales empresariales
 
-- [ ] **MEDIUM** Generative AI Integration
-  - [ ] Análisis de tendencias para generación de contenido
-  - [ ] Sugerencias de texto optimizado para engagement
-  - [ ] Creación de dashboards personalizados con LLMs
-  - [ ] Generación de reportes ejecutivos con insights destacados
-  - [ ] Asistente virtual para consultas analíticas ad-hoc
+### 🌐 Enterprise API Ecosystem (FUTURO)
 
-### 🌐 Enterprise & API Ecosystem
-
-- [ ] **LOW** Mobile app development
-  - [ ] React Native/Flutter app
-  - [ ] Mobile-optimized interface
-  - [ ] Offline analysis capabilities
-  - [ ] Push notifications
+- [ ] **FUTURE** Enterprise API Development
+  - [ ] RESTful API con FastAPI para integraciones empresariales
+  - [ ] Autenticación OAuth empresarial
+  - [ ] Rate limiting y throttling
+  - [ ] Multi-tenant architecture
+  - [ ] Enterprise SDKs (Python, JavaScript, Java)
 
 ---
 
@@ -517,60 +575,58 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
     - [x] ✅ **Setup Script**: Script de instalación automatizada
   - [ ] Development database setup
 
-### CI/CD Pipeline
 
-- [x] ✅ **GitHub Actions workflows** **COMPLETADO**
-  - [x] ✅ Automated testing on PR
-  - [x] ✅ Code quality checks
-  - [x] ✅ Security scanning
-  - [x] ✅ Automated releases
-- [x] ✅ **Consolidated Workflow System** **COMPLETADO JULIO 2025**
-  - [x] ✅ Integrated CI/CD pipeline with ML and AI agents
-  - [x] ✅ Reduced duplication in workflow definitions
-  - [x] ✅ Improved maintainability and documentation
-  - [x] ✅ **v0.2.07**: Consolidación completa de agentes en `main-workflow.yml`
-  - [x] ✅ Integración de AI Testing, Optimization y Feature Agents
+**Web Dashboard & MCP Integration Implementation**: Sistema completo de dashboard web con integración de nuevos MCP servers y capacidades enterprise-grade **COMPLETADO 19 JULIO 2025**
+  - **Integración MCP**: Soporte para múltiples servidores MCP, seguridad y caching avanzado
+  - **Technical Implementation**: Backend FastAPI (main.py:39) versión v0.2.08
+  - **User Experience**: Drag & drop ZIP → validación → análisis → visualización interactiva → download HTML
 
-### Monitoring & Observability
+**Multi-Agent System & Orchestrator Fixes**: Sistema multi-agente CI/CD mejorado y orquestador corregido **COMPLETADO 19 JULIO 2025**
+  - **Orquestador**: Ahora activa workflows de agentes vía `workflow_dispatch` y pasa contexto correctamente
+  - **Agentes**: Todos los agentes (review, docs, tests, optimize, features) soportan triggers manuales y automáticos
+  - **MCP Agents**: Integración de agentes MCP para análisis distribuido y tareas especializadas
 
-- [ ] **Production monitoring**
-  - [ ] Application metrics
-  - [ ] Error tracking (Sentry)
-  - [ ] Performance monitoring
-  - [ ] Usage analytics
+**Git Automation System Implementation**: Sistema completo de automatización Git para control granular **COMPLETADO 18 JULIO 2025**
+  - **Problem Addressed**: Necesidad de control granular del avance y cambios del proyecto
+  - **Architecture**: Siguiendo patrones enterprise para desarrollo ágil y calidad
 
----
+**Compact HTML Reports Implementation**: Sistema completo de reportes compactos para datasets grandes **COMPLETADO 18 JULIO 2025**
+  - **Problem Addressed**: Reportes HTML de 20MB+ para datasets grandes causaban problemas de rendimiento
+  - **Architecture**: Siguiendo patrones del TODO.md para Phase 4 (User Experience & Visualization)
 
-## 📋 Priority Matrix
+**Parallel Processing & Progress Bars Implementation**: Sistema completo de procesamiento paralelo y progress bars **COMPLETADO 18 JULIO 2025**
+  - **ParallelProcessor Class**: Multithreading con ThreadPoolExecutor y async I/O
 
-### 🔥 Critical (Do First)
+**Documentation & Version Update**: Actualización completa de documentación y versión **COMPLETADO 18 JULIO 2025**
+  - **Version Update**: Actualización de versión a v0.2.03 en todos los archivos
 
-1. ✅ Testing coverage improvement (**COMPLETADO - Core testing 100% funcional**)
-2. ✅ Error handling enhancement (completed)
-3. ✅ Performance optimization (caching + memory optimization completed)
-4. ✅ Engagement metrics fix (completed)
-5. ✅ Network graph visualization (completed)
-6. ✅ HTML Exporter complete overhaul (completed)
-7. ✅ **Parser API fixes** (**COMPLETADO JULIO 2025** - JSONParser & EngagementParser)
-8. Documentation completion
+**Testing Infrastructure Complete Fix**: Corrección completa del sistema de testing **COMPLETADO 17 JULIO 2025**
+  - **Impact**: Base de testing sólida y confiable para desarrollo futuro siguiendo estándares enterprise
 
-### ⚡ High Impact (Do Next)
+**DataDetector Parser Tests Fixed**: Validación y detección de estructura de exportación corregida
+  - **Beneficios**: Mayor robustez en la detección de la estructura de datos de Instagram
 
-1. ✅ **Sentiment analysis integration** (**COMPLETADO JULIO 2025** - Framework ML completo)
-2. Interactive web dashboard
-3. Plugin system architecture
-4. Advanced conversation analysis
+**HTML Exporter Complete Overhaul**: Sistema completo de exportación HTML corregido y mejorado
+  - **Resultado Final**: **HTML Exporter 100% funcional** - Reportes hermosos con datos reales, gráficos interactivos, y diseño profesional
 
-### 📈 Medium Impact (Do Later)
+**Configuración VS Code HTML Viewer**: Configuración simplificada para visualización de reportes HTML
+  - **Resultado Final**: **90% menos código** de configuración, más rápido y estable
 
-1. Additional export formats
-2. Database integration
-3. External integrations
-4. Security enhancements
+**Critical Bug Fix - Stories Count**: Solución completa del bug "Total Stories está 0"
+  - **Resultado Final**: **100% SUCCESS** - 8,082 stories ahora se procesan correctamente
 
-### 🎯 Low Impact (Nice to Have)
+**New Data Types Implementation**: Implementación completa de tres nuevos tipos de datos solicitados
+  - **Resultado**: HTML report ahora incluye secciones completas para Stories, Reels y Additional Content
 
-1. Mobile app development
+**Engagement Metrics Fix**: Corrección completa del problema de métricas de engagement mostrando 0
+  - **Resultado**: Métricas de engagement ahora se muestran correctamente en reports HTML
+
+**Network Graph Visualization**: Implementación completa de visualización de grafos de red
+  - **Resultado**: Grafo de red completamente funcional en reports HTML
+
+**Bugfixes & Improvements**:
+  - Corrección de import paths para nuevos modelos (`Profile`, `Media`, `MediaType`)
+  - Sistema completo de debugging para diagnosticar errores de parsing y validación
 2. Computer vision features
 3. Predictive analytics
 4. Social network analysis
@@ -579,7 +635,26 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
 
 ## 🎯 Estado Actual del Proyecto
 
-### 🆕 **RECIENTE** - Cambios Últimos (Julio 2025 - v0.2.05)**
+### 🆕 **RECIENTE** - Cambios Últimos (Julio 2025 - v0.2.08)**
+
+- **Web Dashboard & MCP Integration Implementation**: Sistema completo de dashboard web con capacidades MCP enterprise-grade **COMPLETADO 19 JULIO 2025**
+  - **Technical Implementation Documentado en main.py:39**: Backend FastAPI completo con versión v0.2.08
+  - **Problem Addressed**: Necesidad de interfaz web interactiva para usuarios hobbyistas con capacidades avanzadas de seguridad y cache
+  - **Solution Implemented**: Dashboard web completo con integración de 8 MCP servers
+  - **Key Features**:
+    - **FastAPI Backend**: API REST completa con endpoints para upload, progress, analysis y download
+    - **Interactive Frontend**: Dashboard responsive con drag & drop, progress bars animados y visualizaciones D3.js
+    - **MCP-server-filesystem**: Validación avanzada de uploads, extracción incremental con progress tracking
+    - **MCP-server-redis**: Session management, cache distribuido, progress persistente y notificaciones real-time
+    - **Enhanced Security**: Validación MIME, límites de tamaño, directorios temporales seguros
+    - **Performance Optimization**: Cache automático de análisis (24h TTL), fallback robusto
+  - **Technical Implementation**:
+    - **Web Structure**: `src/instagram_analyzer/web/` con API, static files y templates
+    - **MCP Framework**: `src/instagram_analyzer/mcp/` con client manager y adaptadores especializados
+    - **CLI Integration**: Comando `instagram-miner web` para lanzar dashboard
+    - **Dependencies**: FastAPI, uvicorn, jinja2, python-multipart, python-magic añadidas
+  - **Architecture**: Enfoque individual/hobbyista manteniendo capacidades enterprise en el backend
+  - **User Experience**: Drag & drop ZIP → validación → análisis → visualización interactiva → download HTML
 
 - **Git Automation System Implementation**: Sistema completo de automatización Git para control granular **COMPLETADO 18 JULIO 2025**
   - **Problem Addressed**: Necesidad de control granular del avance y cambios del proyecto
@@ -857,10 +932,12 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
   - **Bug Fix**: Corrección de early return que impedía procesamiento de raw_data
 
 - **Network Graph Visualization**: Visualización de grafos de interacción completa
-  - **NetworkAnalyzer**: Módulo existente para generar grafos de interacciones
+  - **NetworkAnalyzer**: Módulo existente mejorado para generar grafos de interacciones con soporte para followers/following
   - **HTML Exporter Integration**: Método `_get_network_graph_data()` funcional
   - **D3.js Visualization**: Sección "Network Graph" en template HTML con renderizado interactivo
   - **Import Fix**: Corrección de import path para `NetworkAnalyzer`
+  - **Enhanced Relationships**: Añadido soporte para followers/following en grafo de interacciones
+  - **Test Coverage**: Test unitario con datos reales implementado (73.53% coverage)
   - **Interactive Features**: Drag & drop, zoom, y tooltips en grafo de red
 
 ### ✅ **COMPLETADO** - Testing & Quality Assurance (Fase 1 - Core Testing) - 100%
@@ -893,7 +970,7 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
   - **CLI Integration**: Comandos CLI actualizados para usar parallel processing por defecto
   - **Progress Integration**: Progress bars integrados en analyze, export, y load operations
 
-### 📈 **Métricas de Calidad Actuales (Actualizado Julio 2025 - v0.2.05)**
+### 📈 **Métricas de Calidad Actuales (Actualizado Julio 2025 - v0.2.08)**
 
 - **Tests**: 228+ tests totales **MEJORADO**
   - **Success Rate**: **201 passing, 27 failing** (88% success rate)
@@ -917,7 +994,7 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
 - **Arquitectura**: Patterns enterprise implementados (Singleton, Factory, Decorator, Circuit Breaker, Lazy Loading)
 - **Memory Efficiency**: 40-60% mejora en uso de memoria con lazy loading y streaming
 - **Engagement Accuracy**: 100% procesamiento de engagement data desde archivos separados
-- **Network Visualization**: Grafo interactivo completamente funcional con D3.js
+- **Network Visualization**: Grafo interactivo completamente funcional con D3.js, ahora con soporte para followers/following
 - **Data Type Coverage**: 100% soporte para archived_posts, recently_deleted_content, y story_interactions
 - **HTML Report Completeness**: Todas las secciones nuevas (Stories, Reels, Additional Content) funcionalmente completas
 - **HTML Exporter Production Ready**: Sistema completo de exportación con diseño hermoso, datos reales, y gráficos interactivos
@@ -948,7 +1025,23 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
 ---
 
 ## 📝 Notes
-### 🆕 **RECIENTE** - Cambios Últimos (Julio 2025 - v0.2.07)**
+### 🆕 **RECIENTE** - Cambios Últimos (Julio 2025 - v0.2.08)**
+
+- **Enhanced NetworkAnalyzer Implementation**: Mejora del módulo NetworkAnalyzer con soporte para followers/following **COMPLETADO 19 JULIO 2025**
+  - **Problem Addressed**: NetworkAnalyzer solo incluía interacciones de posts, sin aprovechar datos de followers/following
+  - **Solutions Implemented**:
+    - **Enhanced Constructor**: Añadido soporte para followers y following como parámetros opcionales
+    - **Enriched Graphs**: El grafo ahora incluye conexiones directas entre owner y followers/following
+    - **Node Relationships**: Visualización clara de quién sigue a quién en la red social
+    - **Test Coverage**: Implementado test con datos reales anonimizados (73.53% coverage)
+  - **Technical Implementation**:
+    - **Data Privacy**: Anonimización completa de usernames en los tests
+    - **Real Data Integration**: Test utiliza datos de followers/following reales pero anonimizados
+    - **Memory Efficiency**: Limitación a 20 followers/following para tests de rendimiento
+  - **Visual Impact**:
+    - **Richer Graphs**: Grafos de red más completos con todas las conexiones sociales
+    - **Better Insights**: Visualización mejorada de la red social del usuario
+    - **Interactive Features**: Mantenidas características de drag & drop, zoom y tooltips
 
 - **Critical Code Quality & Security Fixes**: Resolución completa de issues críticos de calidad de código y dependencias **COMPLETADO 18 JULIO 2025**
   - **Problem Addressed**: Workflow CI/CD fallando por múltiples problemas de calidad de código y conflictos de dependencias

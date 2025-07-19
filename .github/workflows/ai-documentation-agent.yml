@@ -10,17 +10,27 @@ on:
     workflows: ["AI Agent Orchestrator"]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      issueNumber:
+        description: "Número de issue a procesar"
+        required: true
+        type: string
+      context:
+        description: "Contexto para el agente"
+        required: true
+        type: string
 
 jobs:
   should-run:
     runs-on: ubuntu-latest
     outputs:
-      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-docs-task == 'true' }}
-      issue-number: ${{ steps.get-issue.outputs.issue-number }}
-      context: ${{ steps.get-context.outputs.context }}
+      run-job: ${{ steps.check-label.outputs.has-label == 'true' || steps.check-workflow.outputs.has-docs-task == 'true' || github.event_name == 'workflow_dispatch' }}
+      issue-number: ${{ steps.get-issue.outputs.issue-number || github.event.inputs.issueNumber }}
+      context: ${{ steps.get-context.outputs.context || github.event.inputs.context }}
     steps:
       - id: check-label
-        if: github.event_name != 'workflow_run'
+        if: github.event_name != 'workflow_run' && github.event_name != 'workflow_dispatch'
         uses: actions/github-script@v6
         with:
           script: |

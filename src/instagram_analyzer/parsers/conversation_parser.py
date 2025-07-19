@@ -500,8 +500,9 @@ class ConversationParser:
         conversations = []
 
         if not conversations_dir.exists():
-            print(f"Conversations directory not found: {conversations_dir}")
-            return conversations
+            raise FileNotFoundError(
+                f"Conversations directory not found: {conversations_dir}"
+            )
 
         # Find all conversation directories
         for conv_dir in conversations_dir.iterdir():

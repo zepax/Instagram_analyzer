@@ -6,6 +6,10 @@ This document outlines the architecture, components, and best practices for inte
 
 ## Architecture
 
+**NUEVO 2025:**
+- Integración multi-servidor MCP (Model Context Protocol) para análisis distribuido, seguridad y caching avanzado
+- Agentes MCP especializados integrados en el pipeline ML para tareas distribuidas y orquestación automática
+
 The ML integration follows a modular architecture with the following components:
 
 ```

@@ -23,10 +23,12 @@ class TestEngagementParser:
             "likes_media_likes": [
                 {
                     "title": "Test Post",
-                    "string_map_data": {
-                        "Username": {"value": "testuser"},
-                        "Time": {"value": "2023-01-01T12:00:00+00:00"},
-                    },
+                    "string_list_data": [
+                        {
+                            "href": "https://www.instagram.com/p/test123/",
+                            "timestamp": 1672574400,
+                        }
+                    ],
                 }
             ]
         }
@@ -36,10 +38,10 @@ class TestEngagementParser:
         liked_posts_file.write_text(json.dumps(liked_posts_data))
 
         # Parse
-        liked_posts = self.parser._parse_liked_posts(str(liked_posts_file))
+        liked_posts = self.parser._parse_liked_posts(liked_posts_file)
 
         assert len(liked_posts) == 1
-        assert liked_posts[0].title == "Test Post"
+        assert liked_posts[0]["title"] == "Test Post"
 
     def test_parse_liked_posts_empty(self, tmp_path):
         """Test parsing empty liked posts."""
@@ -50,57 +52,58 @@ class TestEngagementParser:
         liked_posts_file.write_text(json.dumps(liked_posts_data))
 
         # Parse
-        liked_posts = self.parser._parse_liked_posts(str(liked_posts_file))
+        liked_posts = self.parser._parse_liked_posts(liked_posts_file)
 
         assert liked_posts == []
 
     def test_parse_post_comments_basic(self, tmp_path):
         """Test parsing post comments from JSON data."""
-        comments_data = {
-            "comments_media_comments": [
-                {
-                    "title": "Test Comment",
-                    "string_map_data": {
-                        "Username": {"value": "testuser"},
-                        "Time": {"value": "2023-01-01T12:00:00+00:00"},
-                    },
-                }
-            ]
-        }
+        comments_data = [
+            {
+                "media_list_data": [{"uri": "https://www.instagram.com/p/test123/"}],
+                "string_map_data": {
+                    "Comment": {"value": "Test comment text"},
+                    "Time": {"timestamp": 1672574400},
+                },
+            }
+        ]
 
         # Create JSON file
         comments_file = tmp_path / "comments.json"
         comments_file.write_text(json.dumps(comments_data))
 
         # Parse
-        comments = self.parser._parse_post_comments(str(comments_file))
+        comments = self.parser._parse_post_comments(comments_file)
 
         assert len(comments) == 1
-        assert comments[0].title == "Test Comment"
+        assert comments[0]["text"] == "Test comment text"
 
     def test_parse_post_comments_empty(self, tmp_path):
         """Test parsing empty post comments."""
-        comments_data = {"comments_media_comments": []}
+        comments_data = []
 
         # Create JSON file
         comments_file = tmp_path / "comments.json"
         comments_file.write_text(json.dumps(comments_data))
 
         # Parse
-        comments = self.parser._parse_post_comments(str(comments_file))
+        comments = self.parser._parse_post_comments(comments_file)
 
         assert comments == []
 
     def test_parse_reel_comments_basic(self, tmp_path):
         """Test parsing reel comments from JSON data."""
         reel_comments_data = {
-            "comments_ig_reels_comments": [
+            "comments_reels_comments": [
                 {
                     "title": "Test Reel Comment",
-                    "string_map_data": {
-                        "Username": {"value": "testuser"},
-                        "Time": {"value": "2023-01-01T12:00:00+00:00"},
-                    },
+                    "string_list_data": [
+                        {
+                            "href": "https://www.instagram.com/reel/test123/",
+                            "value": "Great reel!",
+                            "timestamp": 1672574400,
+                        }
+                    ],
                 }
             ]
         }
@@ -110,33 +113,35 @@ class TestEngagementParser:
         reel_comments_file.write_text(json.dumps(reel_comments_data))
 
         # Parse
-        reel_comments = self.parser._parse_reel_comments(str(reel_comments_file))
+        reel_comments = self.parser._parse_reel_comments(reel_comments_file)
 
         assert len(reel_comments) == 1
-        assert reel_comments[0].title == "Test Reel Comment"
+        assert reel_comments[0]["title"] == "Test Reel Comment"
 
     def test_parse_reel_comments_empty(self, tmp_path):
         """Test parsing empty reel comments."""
-        reel_comments_data = {"comments_ig_reels_comments": []}
+        reel_comments_data = {"comments_reels_comments": []}
 
         # Create JSON file
         reel_comments_file = tmp_path / "reel_comments.json"
         reel_comments_file.write_text(json.dumps(reel_comments_data))
 
         # Parse
-        reel_comments = self.parser._parse_reel_comments(str(reel_comments_file))
+        reel_comments = self.parser._parse_reel_comments(reel_comments_file)
 
         assert reel_comments == []
 
     def test_parse_from_nonexistent_file(self):
         """Test parsing from nonexistent file."""
-        liked_posts = self.parser._parse_liked_posts("nonexistent.json")
+        from pathlib import Path
+
+        liked_posts = self.parser._parse_liked_posts(Path("nonexistent.json"))
         assert liked_posts == []
 
-        comments = self.parser._parse_post_comments("nonexistent.json")
+        comments = self.parser._parse_post_comments(Path("nonexistent.json"))
         assert comments == []
 
-        reel_comments = self.parser._parse_reel_comments("nonexistent.json")
+        reel_comments = self.parser._parse_reel_comments(Path("nonexistent.json"))
         assert reel_comments == []
 
     def test_parse_from_invalid_json(self, tmp_path):
@@ -146,13 +151,13 @@ class TestEngagementParser:
         invalid_file.write_text("invalid json content")
 
         # Should handle gracefully
-        liked_posts = self.parser._parse_liked_posts(str(invalid_file))
+        liked_posts = self.parser._parse_liked_posts(invalid_file)
         assert liked_posts == []
 
-        comments = self.parser._parse_post_comments(str(invalid_file))
+        comments = self.parser._parse_post_comments(invalid_file)
         assert comments == []
 
-        reel_comments = self.parser._parse_reel_comments(str(invalid_file))
+        reel_comments = self.parser._parse_reel_comments(invalid_file)
         assert reel_comments == []
 
     def test_parse_with_missing_fields(self, tmp_path):
@@ -171,7 +176,7 @@ class TestEngagementParser:
         liked_posts_file.write_text(json.dumps(incomplete_data))
 
         # Parse - should handle gracefully
-        liked_posts = self.parser._parse_liked_posts(str(liked_posts_file))
+        liked_posts = self.parser._parse_liked_posts(liked_posts_file)
 
         # Should still return data or handle gracefully
         assert isinstance(liked_posts, list)
@@ -182,17 +187,21 @@ class TestEngagementParser:
             "likes_media_likes": [
                 {
                     "title": "Post 1",
-                    "string_map_data": {
-                        "Username": {"value": "user1"},
-                        "Time": {"value": "2023-01-01T12:00:00+00:00"},
-                    },
+                    "string_list_data": [
+                        {
+                            "href": "https://www.instagram.com/p/test123/",
+                            "timestamp": 1672574400,
+                        }
+                    ],
                 },
                 {
                     "title": "Post 2",
-                    "string_map_data": {
-                        "Username": {"value": "user2"},
-                        "Time": {"value": "2023-01-02T12:00:00+00:00"},
-                    },
+                    "string_list_data": [
+                        {
+                            "href": "https://www.instagram.com/p/test456/",
+                            "timestamp": 1672660800,
+                        }
+                    ],
                 },
             ]
         }
@@ -202,11 +211,11 @@ class TestEngagementParser:
         liked_posts_file.write_text(json.dumps(multiple_data))
 
         # Parse
-        liked_posts = self.parser._parse_liked_posts(str(liked_posts_file))
+        liked_posts = self.parser._parse_liked_posts(liked_posts_file)
 
         assert len(liked_posts) == 2
-        assert liked_posts[0].title == "Post 1"
-        assert liked_posts[1].title == "Post 2"
+        assert liked_posts[0]["title"] == "Post 1"
+        assert liked_posts[1]["title"] == "Post 2"
 
     def test_parse_with_complex_data(self, tmp_path):
         """Test parsing with more complex data structure."""
@@ -214,10 +223,12 @@ class TestEngagementParser:
             "likes_media_likes": [
                 {
                     "title": "Complex Post",
-                    "string_map_data": {
-                        "Username": {"value": "testuser"},
-                        "Time": {"value": "2023-01-01T12:00:00+00:00"},
-                    },
+                    "string_list_data": [
+                        {
+                            "href": "https://www.instagram.com/p/test123/",
+                            "timestamp": 1672574400,
+                        }
+                    ],
                     "media": [{"uri": "photo.jpg", "creation_timestamp": 1640995200}],
                 }
             ]
@@ -228,10 +239,10 @@ class TestEngagementParser:
         liked_posts_file.write_text(json.dumps(complex_data))
 
         # Parse
-        liked_posts = self.parser._parse_liked_posts(str(liked_posts_file))
+        liked_posts = self.parser._parse_liked_posts(liked_posts_file)
 
         assert len(liked_posts) == 1
-        assert liked_posts[0].title == "Complex Post"
+        assert liked_posts[0]["title"] == "Complex Post"
 
     def test_error_handling_graceful(self, tmp_path):
         """Test graceful error handling."""
@@ -243,11 +254,11 @@ class TestEngagementParser:
         malformed_file.write_text(json.dumps(malformed_data))
 
         # Should handle gracefully
-        liked_posts = self.parser._parse_liked_posts(str(malformed_file))
+        liked_posts = self.parser._parse_liked_posts(malformed_file)
         assert isinstance(liked_posts, list)
 
-        comments = self.parser._parse_post_comments(str(malformed_file))
+        comments = self.parser._parse_post_comments(malformed_file)
         assert isinstance(comments, list)
 
-        reel_comments = self.parser._parse_reel_comments(str(malformed_file))
+        reel_comments = self.parser._parse_reel_comments(malformed_file)
         assert isinstance(reel_comments, list)

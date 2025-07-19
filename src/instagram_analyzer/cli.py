@@ -256,6 +256,59 @@ def info(ctx: click.Context, data_path: Path) -> None:
         sys.exit(1)
 
 
+@main.command()
+@click.option("--host", default="127.0.0.1", help="Host to bind the web server to")
+@click.option("--port", default=8000, help="Port to bind the web server to")
+@click.option("--reload", is_flag=True, help="Enable auto-reload for development")
+@click.pass_context
+def web(ctx: click.Context, host: str, port: int, reload: bool) -> None:
+    """Launch the web dashboard for interactive Instagram analysis.
+
+    This starts a web server that provides a user-friendly interface
+    for uploading and analyzing Instagram exports through a browser.
+    """
+    verbose = ctx.obj.get("verbose", False)
+
+    try:
+        console.print(
+            f"[green]Starting Instagram Personal Analyzer Web Dashboard...[/green]"
+        )
+        console.print(f"[cyan]Host:[/cyan] {host}")
+        console.print(f"[cyan]Port:[/cyan] {port}")
+        console.print(f"[cyan]URL:[/cyan] http://{host}:{port}")
+
+        if reload:
+            console.print("[yellow]Development mode: Auto-reload enabled[/yellow]")
+
+        console.print("\n[bold]Open your browser and navigate to the URL above![/bold]")
+        console.print("[dim]Press Ctrl+C to stop the server[/dim]")
+
+        # Import and run the web app
+        import uvicorn
+
+        from instagram_analyzer.web.api.main import app
+
+        uvicorn.run(
+            "instagram_analyzer.web.api.main:app",
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info" if verbose else "warning",
+        )
+
+    except ImportError as e:
+        console.print(f"[red]Missing web dependencies. Please install with:[/red]")
+        console.print("[cyan]poetry install[/cyan]")
+        if verbose:
+            console.print(f"Error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error starting web server: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        sys.exit(1)
+
+
 def _display_summary(results: dict) -> None:
     """Display analysis results summary."""
     table = Table(title="Analysis Summary")
