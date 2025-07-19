@@ -10,7 +10,10 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
 
 - 📋 **TODO.md** (este archivo) para prioridades actuales
 - 📚 **DEVELOPMENT_GUIDELINES.md** para mejores prácticas
-- 📁 **## 📋 Prioridades Actuales: Data Mining & ML Pipeline
+- 📁 **MIGRATION_REPORT.md** para contexto de la migración
+- 🧠 **ML_INTEGRATION.md** para guías de integración de machine learning
+
+## 📋 Prioridades Actuales: Data Mining & ML Pipeline
 
 ### ⚡ **URGENT** - Integración Data Mining & ML (Q3-2023)
 
@@ -1046,13 +1049,71 @@ Este documento contiene las tareas prioritarias para evolucionar y expandir la p
 
 ---
 
+## 🔍 TODOs en el Código (Julio 2025)
+
+Estos son los TODOs identificados en el código que deben ser abordados:
+
+### 📊 Analyzers
+
+1. **SentimentAnalyzer**: Implementar módulo para análisis de sentimientos
+   - Archivo: `src/instagram_analyzer/analyzers/__init__.py`
+   - Prioridad: Media
+   - Descripción: Desarrollar un módulo que utilice NLP para clasificar el sentimiento de los mensajes y comentarios
+
+### 📚 Documentación
+
+1. **Generación de Sphinx**: Implementar generación completa de documentación
+   - Archivo: `Makefile` (regla `docs`)
+   - Prioridad: Alta
+   - Estado: ✅ Completado (Julio 2025)
+
+### 📝 Tests
+
+1. **Test Cases para HTML Exporter Edge Cases**: Agregar casos de prueba para el exportador HTML
+   - Archivo: `tests/unit/exporters/test_html_exporter_edge.py`
+   - Prioridad: Media
+   - Descripción: Completar casos de prueba para situaciones límite como datos vacíos o malformados
+
+### 🌐 Web Dashboard
+
+1. **Implementación de Tareas en Background**: Mejorar manejo de tareas asíncronas
+   - Archivo: `src/instagram_analyzer/web/api/main.py`
+   - Prioridad: Media
+   - Descripción: Implementar sistema completo de tareas en background con notificación de progreso
+
+### 🔄 Extractores
+
+1. **Paralelización en ConversationExtractor**: Optimizar extracción de conversaciones
+   - Archivo: `src/instagram_analyzer/extractors/conversation_extractor.py`
+   - Prioridad: Baja
+   - Descripción: Mejorar la paralelización del proceso de extracción de conversaciones
+
+### 📊 HTML Exporter
+
+1. **Mejora de Progress Bars**: Optimizar visualización de progreso
+   - Archivo: `src/instagram_analyzer/exporters/html_exporter.py`
+   - Prioridad: Baja
+   - Descripción: Refinar el sistema de barras de progreso para mayor feedback visual
+
+### 💬 Conversation Analyzer
+
+1. **Mejora de Stop Words**: Expandir lista de palabras de parada
+   - Archivo: `src/instagram_analyzer/analyzers/conversation_analyzer.py`
+   - Prioridad: Baja
+   - Descripción: Ampliar la lista de stop words para mejorar el análisis de temas en conversaciones
+
+2. **Keyword Analysis**: Refinamiento del sistema de análisis de palabras clave
+   - Archivo: `src/instagram_analyzer/parsers/conversation_parser.py`
+   - Prioridad: Media
+   - Descripción: Mejorar el algoritmo de extracción de palabras clave relevantes
+
 ## 🏁 Getting Started
 
-1. **Pick a task** from Phase 1 (Foundation & Quality)
-2. **Create a feature branch** from main
-3. **Implement the feature** following the existing code patterns
-4. **Write tests** for your implementation
-5. **Update documentation** as needed
-6. **Submit a pull request** for review
+1. **Pick a task** from las secciones anteriores o del listado de TODOs
+2. **Create a feature branch** desde la rama actual de desarrollo (v0.2.10)
+3. **Implement the feature** siguiendo los patrones de código existentes
+4. **Write tests** para tu implementación
+5. **Update documentation** según sea necesario
+6. **Submit a pull request** para revisión
 
-Remember to update this TODO list as tasks are completed and new requirements emerge!
+Recuerda actualizar esta lista TODO a medida que se completen tareas y surjan nuevos requisitos!
