@@ -490,7 +490,8 @@ class InstagramAnalyzer:
                 if data:
                     self._profile = self.parser.parse_profile(data)
                     break
-            except Exception:
+            except Exception as e:
+                self.logger.warning(f"Could not parse profile file {file_path}: {e}")
                 continue
 
     def _load_posts(self, structure: dict[str, Any]) -> None:
@@ -514,7 +515,8 @@ class InstagramAnalyzer:
                     self._posts_cache.extend(posts)
                 else:
                     self._posts_list.extend(posts)
-            except Exception:
+            except Exception as e:
+                self.logger.warning(f"Could not parse post file {file_path}: {e}")
                 continue
 
     def _load_stories(self, structure: dict[str, Any]) -> None:
@@ -532,10 +534,8 @@ class InstagramAnalyzer:
                     self._stories_cache.extend(stories)
                 else:
                     self._stories_list.extend(stories)
-            except Exception:
-                import traceback
-
-                traceback.print_exc()
+            except Exception as e:
+                self.logger.warning(f"Could not parse story file {file_path}: {e}")
                 continue
 
     def _load_reels(self, structure: dict[str, Any]) -> None:
@@ -559,7 +559,8 @@ class InstagramAnalyzer:
                     self._reels_cache.extend(reels)
                 else:
                     self._reels_list.extend(reels)
-            except Exception:
+            except Exception as e:
+                self.logger.warning(f"Could not parse reel file {file_path}: {e}")
                 continue
 
     def _load_engagement_data(self, structure: dict[str, Any]) -> None:

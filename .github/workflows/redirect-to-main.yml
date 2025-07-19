@@ -3,8 +3,6 @@
 # See docs/CONSOLIDATED_WORKFLOW.md for more information
 
 
-
-
 on:
   workflow_dispatch:
     inputs:
@@ -40,7 +38,7 @@ jobs:
               .filter(name => /^v\d+\.\d+\.\d+/.test(name))
               .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
             const latest = versionTags[0];
-            if (!latest) throw new Error('No se encontró ningún tag de versión vX.Y.Z en el repositorio.');
+            if (!latest) throw new Error('No se encontro ningun tag de version vX.Y.Z en el repositorio.');
             core.setOutput('latest_tag', latest);
 
       - name: Trigger main workflow
@@ -49,7 +47,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const ref = process.env.INPUT_TARGET_REF || process.env.LATEST_TAG;
-            if (!ref) throw new Error('No se encontró ref de destino (ni input ni tag de versión).');
+            if (!ref) throw new Error('No se encontro ref de destino (ni input ni tag de version).');
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -61,4 +59,5 @@ jobs:
               }
             });
         env:
+          INPUT_TARGET_REF: ${{ github.event.inputs.target_ref }}
           LATEST_TAG: ${{ steps.get-latest-tag.outputs.latest_tag }}

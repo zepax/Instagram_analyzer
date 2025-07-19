@@ -65,8 +65,10 @@ def parse_instagram_date(date_value: Union[str, int, float]) -> Optional[datetim
                     dt = dt.astimezone(timezone.utc)
                 return dt
 
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+
+        logging.warning(f"Error parsing datetime: {e}")
     return None
 
 

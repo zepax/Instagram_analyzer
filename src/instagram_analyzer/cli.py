@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional, TypeVar, cast
 
 import click
 from rich.console import Console
@@ -14,16 +14,32 @@ from .exceptions import InstagramAnalyzerError
 from .logging_config import get_logger, setup_logging
 from .utils import validate_path
 
+F = TypeVar("F", bound=Callable[..., Any])
+
+# Crear una instancia de Console para usar en toda la interfaz de línea de comandos
 console = Console()
 
 
-@click.group()
+def typed_group(func: F) -> F:
+    """Ensure CLI group functions have correct typing."""
+    return cast(F, func)
+
+
+def typed_command(func: F) -> F:
+    """Apply click.command decorator with proper typing."""
+    return cast(F, click.command()(func))
+
+
+@click.group(
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
 @click.version_option(version="0.2.05")
-@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
+@click.option("-v", "--verbose", is_flag=True, help="Enable verbose output")
 @click.option(
     "--log-level",
     default="INFO",
-    help="Set logging level (DEBUG, INFO, WARNING, ERROR)",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    help="Set logging level",
 )
 @click.option("--log-file", help="Enable file logging to specified directory")
 @click.pass_context
@@ -49,7 +65,7 @@ def main(
     )
 
     logger = get_logger("cli")
-    logger.info(f"Starting Instagram Analyzer v0.2.05 with log level: {log_level}")
+    logger.info("Starting Instagram Analyzer v0.2.05 with log level: %s", log_level)
 
     if verbose:
         console.print("[bold blue]Instagram Analyzer v0.2.05[/bold blue]")
@@ -139,6 +155,9 @@ def analyze(
 
         output.mkdir(exist_ok=True)
 
+        # Inicializar report_path con un valor predeterminado
+        report_path = output
+
         if format == "html":
             report_path = analyzer.export_html(
                 output,
@@ -160,12 +179,14 @@ def analyze(
 
         # Display results summary
         _display_summary(results)
-        console.print(f"\n[green]✓[/green] Report generated: [bold]{report_path}[/bold]")
-        logger.info(f"Analysis completed successfully. Report saved to: {report_path}")
+        console.print(
+            "\n[green]✓[/green] Report generated: [bold]" + str(report_path) + "[/bold]"
+        )
+        logger.info("Analysis completed successfully. Report saved to: %s", report_path)
 
     except InstagramAnalyzerError as e:
         # Handle custom application errors
-        logger.error(f"Analysis failed: {e}", extra=e.context)
+        logger.error("Analysis failed: %s", e, extra=e.context)
         console.print(f"[red]Analysis Error: {e.message}[/red]")
         if verbose and e.context:
             console.print(f"[yellow]Context: {e.context}[/yellow]")
@@ -173,7 +194,10 @@ def analyze(
 
     except Exception as e:
         # Handle unexpected errors
-        logger.error(f"Unexpected error during analysis: {e}", exc_info=True)
+        import logging
+
+        logging.exception("Unexpected error during analysis: %s", e)
+        logger.exception("Unexpected error during analysis: %s", e)
         console.print(f"[red]Unexpected error: {e}[/red]")
         if verbose:
             console.print_exception()
@@ -271,7 +295,7 @@ def web(ctx: click.Context, host: str, port: int, reload: bool) -> None:
 
     try:
         console.print(
-            f"[green]Starting Instagram Personal Analyzer Web Dashboard...[/green]"
+            "[green]Starting Instagram Personal Analyzer Web Dashboard...[/green]"
         )
         console.print(f"[cyan]Host:[/cyan] {host}")
         console.print(f"[cyan]Port:[/cyan] {port}")
@@ -286,7 +310,9 @@ def web(ctx: click.Context, host: str, port: int, reload: bool) -> None:
         # Import and run the web app
         import uvicorn
 
-        from instagram_analyzer.web.api.main import app
+        # Importamos el módulo, no directamente la aplicación
+        # para evitar advertencias de importación no utilizada
+        import instagram_analyzer.web.api.main
 
         uvicorn.run(
             "instagram_analyzer.web.api.main:app",
@@ -297,7 +323,7 @@ def web(ctx: click.Context, host: str, port: int, reload: bool) -> None:
         )
 
     except ImportError as e:
-        console.print(f"[red]Missing web dependencies. Please install with:[/red]")
+        console.print("[red]Missing web dependencies. Please install with:[/red]")
         console.print("[cyan]poetry install[/cyan]")
         if verbose:
             console.print(f"Error: {e}")

@@ -126,8 +126,10 @@ class JSONParser:
                 post = self._parse_single_post(post_data)
                 if post:
                     posts.append(post)
-            except Exception:
-                # Skip invalid posts
+            except Exception as e:
+                import logging
+
+                logging.warning(f"Error parsing post: {e}")
                 continue
 
         return posts
@@ -163,8 +165,10 @@ class JSONParser:
                 story = self._parse_single_story(story_data)
                 if story:
                     stories.append(story)
-            except Exception:
-                # Skip invalid stories
+            except Exception as e:
+                import logging
+
+                logging.warning(f"Error parsing story: {e}")
                 continue
 
         return stories
@@ -200,8 +204,10 @@ class JSONParser:
                 reel = self._parse_single_reel(reel_data)
                 if reel:
                     reels.append(reel)
-            except Exception:
-                # Skip invalid reels
+            except Exception as e:
+                import logging
+
+                logging.warning(f"Error parsing reel: {e}")
                 continue
 
         return reels
@@ -241,7 +247,10 @@ class JSONParser:
                     media = self._parse_single_media(item_data)
                     if media:
                         media_list.append(media)
-            except Exception:
+            except Exception as e:
+                import logging
+
+                logging.warning(f"Error parsing recently deleted media: {e}")
                 continue
 
         return media_list
@@ -272,7 +281,10 @@ class JSONParser:
                 )
                 if interaction:
                     interactions.append(interaction)
-            except Exception:
+            except Exception as e:
+                import logging
+
+                logging.warning(f"Error parsing story interaction: {e}")
                 continue
 
         return interactions
@@ -417,10 +429,10 @@ class JSONParser:
                 thumbnail_uri="",  # Will be set if available
                 ig_media_id=data.get("id", ""),
             )
-        except Exception:
-            import traceback
+        except Exception as e:
+            import logging
 
-            traceback.print_exc()
+            logging.warning(f"Error parsing media: {e}")
             return None
 
         try:
@@ -440,10 +452,10 @@ class JSONParser:
                 raw_data=data,
             )
             return story
-        except Exception:
-            import traceback
+        except Exception as e:
+            import logging
 
-            traceback.print_exc()
+            logging.warning(f"Error parsing story: {e}")
             return None
 
     def _parse_single_reel(self, data: dict[str, Any]) -> Optional[Reel]:
@@ -643,7 +655,10 @@ class JSONParser:
                     raw_data=comment_data,
                 )
                 comments.append(comment)
-            except Exception:
+            except Exception as e:
+                import logging
+
+                logging.warning(f"Error parsing comment: {e}")
                 continue
 
         return comments
@@ -670,7 +685,10 @@ class JSONParser:
                     raw_data=like_data,
                 )
                 likes.append(like)
-            except Exception:
+            except Exception as e:
+                import logging
+
+                logging.warning(f"Error parsing like: {e}")
                 continue
 
         return likes

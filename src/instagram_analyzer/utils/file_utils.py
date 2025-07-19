@@ -124,8 +124,8 @@ def get_directory_size(directory: Path) -> int:
         for path in directory.rglob("*"):
             if path.is_file():
                 total_size += path.stat().st_size
-    except Exception:
-        pass
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Error calculating directory size for {directory}: {e}")
     return total_size
 
 
@@ -141,7 +141,8 @@ def ensure_directory(directory: Path) -> bool:
     try:
         directory.mkdir(parents=True, exist_ok=True)
         return True
-    except Exception:
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Error ensuring directory {directory}: {e}")
         return False
 
 

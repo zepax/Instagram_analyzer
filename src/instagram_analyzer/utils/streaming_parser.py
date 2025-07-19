@@ -82,8 +82,8 @@ class StreamingJSONParser:
         try:
             with open(file_path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception as e:
-            self.logger.error(f"Failed to parse {file_path}: {e}")
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
+            self.logger.error("Failed to parse %s: %s", file_path, e)
             return {}
 
     def _parse_streaming(self, file_path: Path) -> Iterator[dict[str, Any]]:
@@ -121,8 +121,8 @@ class StreamingJSONParser:
                     except Exception:
                         pass
 
-        except Exception as e:
-            self.logger.error(f"Streaming parsing failed for {file_path}: {e}")
+        except OSError as e:
+            self.logger.error("Streaming parsing failed for %s: %s", file_path, e)
 
         # Fall back to standard parsing
         data = self._parse_standard(file_path)
@@ -274,7 +274,7 @@ class BatchProcessor:
                 if result is not None:
                     processed.append(result)
             except Exception as e:
-                self.logger.debug(f"Failed to process item: {e}")
+                self.logger.debug("Failed to process item: %s", e)
                 continue
         return processed
 
@@ -283,7 +283,7 @@ def get_file_size_mb(file_path: Path) -> float:
     """Get file size in megabytes."""
     try:
         return file_path.stat().st_size / (1024 * 1024)
-    except Exception:
+    except (OSError, FileNotFoundError):
         return 0.0
 
 

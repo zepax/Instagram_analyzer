@@ -54,7 +54,7 @@ def save_pipeline(pipeline: Any, path: str, use_mlflow: bool = False) -> None:
                 # Save model
                 mlflow.sklearn.log_model(pipeline, path)
         except Exception as e:
-            logger.error(f"Error saving pipeline with MLflow: {str(e)}")
+            logger.error("Error saving pipeline with MLflow: %s", e)
             # Fall back to joblib/pickle
             logger.info("Falling back to joblib/pickle")
             _save_with_joblib_or_pickle(pipeline, path)
@@ -75,14 +75,14 @@ def _save_with_joblib_or_pickle(obj: Any, path: str) -> None:
 
     try:
         if HAS_JOBLIB:
-            logger.info(f"Saving object with joblib to {path}")
+            logger.info("Saving object with joblib to %s", path)
             joblib.dump(obj, path)
         else:
-            logger.info(f"Saving object with pickle to {path}")
+            logger.info("Saving object with pickle to %s", path)
             with open(path, "wb") as f:
                 pickle.dump(obj, f)
     except Exception as e:
-        logger.error(f"Error saving object: {str(e)}")
+        logger.error("Error saving object: %s", e)
         raise
 
 
@@ -105,7 +105,7 @@ def load_pipeline(path: str, use_mlflow: bool = False) -> Any:
         try:
             return mlflow.sklearn.load_model(path)
         except Exception as e:
-            logger.error(f"Error loading pipeline with MLflow: {str(e)}")
+            logger.error("Error loading pipeline with MLflow: %s", e)
             # Fall back to joblib/pickle
             logger.info("Falling back to joblib/pickle")
             return _load_with_joblib_or_pickle(path)
@@ -144,7 +144,7 @@ def _load_with_joblib_or_pickle(path: str) -> Any:
                     )
                 return pickle.load(f)
     except Exception as e:
-        logger.error(f"Error loading object: {str(e)}")
+        logger.error("Error loading object: %s", e)
         raise
 
 
@@ -163,14 +163,14 @@ def save_model_metadata(metadata: dict[str, Any], path: str) -> None:
 
     try:
         if HAS_JOBLIB:
-            logger.info(f"Saving model metadata with joblib to {path}")
+            logger.info("Saving model metadata with joblib to %s", path)
             joblib.dump(metadata, path)
         else:
-            logger.info(f"Saving model metadata with pickle to {path}")
+            logger.info("Saving model metadata with pickle to %s", path)
             with open(path, "wb") as f:
                 pickle.dump(metadata, f)
     except Exception as e:
-        logger.error(f"Error saving model metadata: {str(e)}")
+        logger.error("Error saving model metadata: %s", e)
         raise
 
 
@@ -204,5 +204,5 @@ def load_model_metadata(path: str) -> dict[str, Any]:
                     )
                 return pickle.load(f)
     except Exception as e:
-        logger.error(f"Error loading model metadata: {str(e)}")
+        logger.error("Error loading model metadata: %s", e)
         raise

@@ -238,7 +238,10 @@ class HTMLExporter:
         # Engagement totals
         total_likes = sum(post.likes_count for post in analyzer.posts)
         total_comments = sum(post.comments_count for post in analyzer.posts)
-        overview["engagement_totals"] = {"likes": total_likes, "comments": total_comments}
+        overview["engagement_totals"] = {
+            "likes": total_likes,
+            "comments": total_comments,
+        }
 
         return overview
 
@@ -454,15 +457,13 @@ class HTMLExporter:
                 "total_usage": len(all_hashtags),
                 "posts_with_hashtags": posts_with_hashtags,
                 "usage_rate": (
-                    round(
-                        int(posts_with_hashtags) / len(analyzer.posts) * 100, 1
+                    round(int(posts_with_hashtags) / len(analyzer.posts) * 100, 1)
+                    if isinstance(posts_with_hashtags, (int, float))
+                    or (
+                        isinstance(posts_with_hashtags, str)
+                        and posts_with_hashtags.isdigit()
                     )
-                    if isinstance(posts_with_hashtags, (int, float)) or (
-                        isinstance(posts_with_hashtags, str) and posts_with_hashtags.isdigit()
-                    )
-                    else 0
-                    if analyzer.posts
-                    else 0
+                    else 0 if analyzer.posts else 0
                 ),
                 "top_hashtags": top_hashtags,
                 "avg_per_post": (
@@ -537,6 +538,7 @@ class HTMLExporter:
         )
         if max_items:
             sorted_archived = sorted_archived[:max_items]
+        logger = logging.getLogger(__name__)
         for p in sorted_archived:
             post_data = self._format_post_for_report(p, analyzer, False)
             # Make all media paths relative if present
@@ -558,7 +560,7 @@ class HTMLExporter:
                         rel_path = os.path.relpath(str(img_path), str(html_dir))
                         media["uri"] = rel_path
                     except (ValueError, OSError) as e:
-                        logging.warning(f"Could not convert image path: {e}")
+                        logger.warning("Could not convert image path: %s", e)
                 if "thumbnail" in media and media["thumbnail"]:
                     try:
                         html_dir = (
@@ -576,7 +578,7 @@ class HTMLExporter:
                         rel_path = os.path.relpath(str(thumb_path), str(html_dir))
                         media["thumbnail"] = rel_path
                     except (ValueError, OSError) as e:
-                        logging.warning(f"Could not convert thumbnail path: {e}")
+                        logger.warning("Could not convert thumbnail path: %s", e)
             archived_posts.append(post_data)
 
         # Recently deleted content
@@ -612,7 +614,7 @@ class HTMLExporter:
                     rel_path = os.path.relpath(str(uri_path), str(html_dir))
                     uri_val = rel_path
                 except (ValueError, OSError) as e:
-                    logging.warning(f"Could not convert URI path: {e}")
+                    logging.warning("Could not convert URI path: %s", e)
             if thumb:
                 try:
                     html_dir = (
@@ -630,7 +632,7 @@ class HTMLExporter:
                     rel_path = os.path.relpath(str(thumb_path), str(html_dir))
                     thumb = rel_path
                 except (ValueError, OSError) as e:
-                    logging.warning(f"Could not convert thumbnail path: {e}")
+                    logging.warning("Could not convert thumbnail path: %s", e)
             recently_deleted.append(
                 {
                     "uri": uri_val,
@@ -912,8 +914,9 @@ class HTMLExporter:
                     img_path = (analyzer.data_path / img_path).resolve()
                 rel_path = os.path.relpath(str(img_path), str(html_dir))
                 data["media_uri"] = rel_path
-            except Exception:
-                pass
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error resolving media path for story: {e}")
 
         # Add thumbnail for images
         if story.media and story.media.media_type.value == "IMAGE":
@@ -928,7 +931,9 @@ class HTMLExporter:
                             data["thumbnail"] = "../" + str(thumb_path)
                         else:
                             data["thumbnail"] = str(thumb_path)
-                    except Exception:
+                    except Exception as e:
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Error generating thumbnail for story: {e}")
                         pass  # No ponemos una imagen de marcador de posición
 
         return data
@@ -966,8 +971,9 @@ class HTMLExporter:
                     img_path = (analyzer.data_path / img_path).resolve()
                 rel_path = os.path.relpath(str(img_path), str(html_dir))
                 data["media_uri"] = rel_path
-            except Exception:
-                pass
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error resolving media path for reel: {e}")
 
         # Add thumbnail for videos (first frame) or images
         if reel_media:
@@ -982,7 +988,9 @@ class HTMLExporter:
                             data["thumbnail"] = "../" + str(thumb_path)
                         else:
                             data["thumbnail"] = str(thumb_path)
-                    except Exception:
+                    except Exception as e:
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Error generating thumbnail for reel: {e}")
                         pass  # No ponemos una imagen de marcador de posición
 
         return data

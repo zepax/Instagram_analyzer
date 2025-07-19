@@ -87,7 +87,7 @@ class MCPClient:
             }
             logger.info("Filesystem MCP server connected")
         except Exception as e:
-            logger.error(f"Failed to connect to filesystem MCP server: {e}")
+            logger.error("Failed to connect to filesystem MCP server: %s", e)
 
     async def _init_redis(self) -> None:
         """Initialize Redis MCP server connection."""
@@ -106,7 +106,7 @@ class MCPClient:
             }
             logger.info("Redis MCP server connected")
         except Exception as e:
-            logger.error(f"Failed to connect to Redis MCP server: {e}")
+            logger.error("Failed to connect to Redis MCP server: %s", e)
 
     async def _init_ai_servers(self) -> None:
         """Initialize AI MCP servers (OpenAI, Anthropic, HuggingFace)."""
@@ -127,7 +127,7 @@ class MCPClient:
                     }
                     logger.info(f"{server.title()} AI MCP server connected")
         except Exception as e:
-            logger.error(f"Failed to connect to AI MCP servers: {e}")
+            logger.error("Failed to connect to AI MCP servers: %s", e)
 
     async def _init_github(self) -> None:
         """Initialize GitHub MCP server connection."""
@@ -145,7 +145,7 @@ class MCPClient:
             }
             logger.info("GitHub MCP server connected")
         except Exception as e:
-            logger.error(f"Failed to connect to GitHub MCP server: {e}")
+            logger.error("Failed to connect to GitHub MCP server: %s", e)
 
     async def _init_selenium(self) -> None:
         """Initialize Selenium MCP server connection."""
@@ -163,7 +163,7 @@ class MCPClient:
             }
             logger.info("Selenium MCP server connected")
         except Exception as e:
-            logger.error(f"Failed to connect to Selenium MCP server: {e}")
+            logger.error("Failed to connect to Selenium MCP server: %s", e)
 
     async def _init_fetch(self) -> None:
         """Initialize Fetch MCP server connection."""
@@ -181,7 +181,7 @@ class MCPClient:
             }
             logger.info("Fetch MCP server connected")
         except Exception as e:
-            logger.error(f"Failed to connect to Fetch MCP server: {e}")
+            logger.error("Failed to connect to Fetch MCP server: %s", e)
 
     async def close(self) -> None:
         """Close all MCP server connections."""
@@ -196,7 +196,7 @@ class MCPClient:
                 connection["status"] = "disconnected"
                 logger.info(f"Closed {name} MCP connection")
             except Exception as e:
-                logger.error(f"Error closing {name} MCP connection: {e}")
+                logger.error("Error closing %s MCP connection: %s", name, e)
 
         self.connections.clear()
         self.initialized = False
