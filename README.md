@@ -41,6 +41,9 @@ A comprehensive analysis tool for Instagram data exports. Analyze your Instagram
 
 ### 📈 Advanced Features
 - **Machine Learning**: Sentiment analysis, engagement prediction, and content categorization
+- **Web Dashboard**: Interactive web interface with drag & drop upload for personal analysis
+- **MCP Integration**: Multi-server Model Context Protocol (MCP) integration for distributed analysis, enhanced security, and advanced caching
+- **Multi-Agent System**: Automated CI/CD with orchestrator and specialized agents (review, docs, tests, optimize, features, MCP)
 - **Caching System**: Three-tier caching (memory, disk, database) for improved performance
 - **Export Options**: HTML reports, JSON data, and PDF summaries
 - **CLI Interface**: Command-line tools for batch processing and automation
@@ -119,6 +122,9 @@ instagram-miner analyze /path/to/instagram/export --compact --max-items 50
 
 # Generate PDF report
 instagram-miner analyze /path/to/instagram/export -f pdf -o ./reports
+
+# Launch interactive web dashboard (v0.2.08+)
+instagram-miner web --host 0.0.0.0 --port 8000
 ```
 
 #### Global Options

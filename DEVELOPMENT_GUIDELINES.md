@@ -4,6 +4,11 @@
 
 **SIEMPRE seguir el TODO.md y la estructura de carpetas organizada para mantener las mejores prácticas de desarrollo.**
 
+**NUEVO 2025:**
+- Integración de servidores MCP (Model Context Protocol) para análisis distribuido y caching avanzado
+- Sistema multi-agente CI/CD con orquestador y agentes especializados (review, docs, tests, optimize, features, MCP)
+- Orquestador actualizado: activa workflows de agentes vía `workflow_dispatch` y pasa contexto correctamente
+
 ---
 
 ## 📁 **Estructura de Directorios (OBLIGATORIA)**

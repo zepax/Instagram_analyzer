@@ -154,22 +154,95 @@ jobs:
     if: needs.triage.outputs.assigned_labels != ''
     runs-on: ubuntu-latest
     steps:
-      - name: Notify documentation agent
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger documentation agent
         if: contains(needs.triage.outputs.assigned_labels, 'ai:docs')
-        run: echo "Documentation agent would be triggered here"
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-documentation-agent.yml',
+              ref: context.ref,
+              inputs: {
+                context: ${{ toJSON(needs.triage.outputs.task_context) }},
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+              }
+            });
+            console.log('Documentation agent triggered');
 
-      - name: Notify testing agent
+      - name: Trigger testing agent
         if: contains(needs.triage.outputs.assigned_labels, 'ai:test')
-        run: echo "Testing agent would be triggered here"
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-testing-agent.yml',
+              ref: context.ref,
+              inputs: {
+                context: ${{ toJSON(needs.triage.outputs.task_context) }},
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+              }
+            });
+            console.log('Testing agent triggered');
 
-      - name: Notify optimization agent
+      - name: Trigger optimization agent
         if: contains(needs.triage.outputs.assigned_labels, 'ai:optimize')
-        run: echo "Optimization agent would be triggered here"
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-optimization-agent.yml',
+              ref: context.ref,
+              inputs: {
+                context: ${{ toJSON(needs.triage.outputs.task_context) }},
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+              }
+            });
+            console.log('Optimization agent triggered');
 
-      - name: Notify feature agent
+      - name: Trigger feature agent
         if: contains(needs.triage.outputs.assigned_labels, 'ai:feature')
-        run: echo "Feature agent would be triggered here"
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-feature-agent.yml',
+              ref: context.ref,
+              inputs: {
+                context: ${{ toJSON(needs.triage.outputs.task_context) }},
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+              }
+            });
+            console.log('Feature agent triggered');
 
-      - name: Notify review agent
+      - name: Trigger review agent
         if: contains(needs.triage.outputs.assigned_labels, 'ai:review')
-        run: echo "Review agent would be triggered here"
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-review-agent.yml',
+              ref: context.ref,
+              inputs: {
+                context: ${{ toJSON(needs.triage.outputs.task_context) }},
+                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}'
+              }
+            });
+            console.log('Review agent triggered');
