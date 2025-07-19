@@ -51,8 +51,13 @@ class ConversationParser:
             return self._parse_conversation_data(data, conversation_file)
 
         except Exception as e:
-            print(f"Error parsing conversation file {conversation_file}: {e}")
-            return None
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            logger.error("Error parsing conversation file %s: %s", conversation_file, e)
+            raise InstagramAnalyzerError(
+                f"Error parsing conversation file {conversation_file}: {e}",
+                context={"file_path": str(conversation_file)},
+            ) from e
 
     def _parse_conversation_data(
         self, data: dict[str, Any], file_path: Path

@@ -290,8 +290,13 @@ class DataDetector:
                                 return True
 
             return False
-        except Exception:
-            return False
+        except Exception as e:
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            raise InstagramAnalyzerError(
+                f"Error detecting posts file: {e}",
+                context={"file_path": str(file_path)},
+            ) from e
 
     def _is_stories_file(self, file_path: Path) -> bool:
         """Check if file contains stories data."""
@@ -320,8 +325,13 @@ class DataDetector:
                         return True
 
             return False
-        except Exception:
-            return False
+        except Exception as e:
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            raise InstagramAnalyzerError(
+                f"Error detecting stories file: {e}",
+                context={"file_path": str(file_path)},
+            ) from e
 
     def _is_reels_file(self, file_path: Path) -> bool:
         """Check if file contains reels data."""
@@ -345,8 +355,13 @@ class DataDetector:
                                 return True
 
             return False
-        except Exception:
-            return False
+        except Exception as e:
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            raise InstagramAnalyzerError(
+                f"Error detecting reels file: {e}",
+                context={"file_path": str(file_path)},
+            ) from e
 
     def _has_post_structure(self, item: dict[str, Any]) -> bool:
         """Check if item has post-like structure."""

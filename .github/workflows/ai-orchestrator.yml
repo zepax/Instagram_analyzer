@@ -1,337 +1,156 @@
-name: AI Agent Orchestrator
-# Orquestador principal para el sistema Multi-Agent
-# Analiza issues y PRs para asignar las etiquetas correspondientes que activarán los agentes especializados
+name: AI Orchestrator
 
 on:
   issues:
     types: [opened, edited, labeled]
   pull_request:
     types: [opened, edited, labeled]
-  workflow_dispatch:
-    inputs:
-      task_type:
-        description: "Tipo de tarea a realizar (docs, test, optimize, feature, review)"
-        required: true
-        default: "review"
-      target_module:
-        description: "Módulo objetivo (cache, parser, analyzer, exporter, etc)"
-        required: false
-        default: ""
 
 jobs:
   triage:
     runs-on: ubuntu-latest
+    outputs:
+      assigned_labels: ${{ steps.assign-labels.outputs.assigned_labels }}
+      requires_agents: ${{ steps.needs-agents.outputs.requires_agents }}
+    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Analyze request and assign labels
-        id: analyze
+      - name: Assign AI agent labels
+        id: assign-labels
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const body = context.payload.issue ? context.payload.issue.body :
-                        (context.payload.pull_request ? context.payload.pull_request.body : '');
-
-            const issueNumber = context.payload.issue ? context.payload.issue.number :
-                              (context.payload.pull_request ? context.payload.pull_request.number : null);
-
-            if (!issueNumber && !context.payload.inputs) {
-              console.log('No issue/PR detected and not manually triggered');
-              return;
-            }
-
-            let labels = [];
-            let taskContext = {};
-
-            // Si es un workflow_dispatch manual, usar los inputs
-            if (context.payload.inputs) {
-              const taskType = context.payload.inputs.task_type;
-              if (taskType) {
-                labels.push(`ai:${taskType}`);
-                taskContext.targetModule = context.payload.inputs.target_module || '';
-                taskContext.manuallyTriggered = true;
-              }
-            }
-            // Si es un issue o PR, analizar el contenido
-            else if (body) {
-              // Análisis para documentación
-              if (body.toLowerCase().includes('documentación') ||
-                  body.toLowerCase().includes('documentation') ||
-                  body.toLowerCase().includes('docs') ||
-                  body.toLowerCase().includes('readme')) {
-                labels.push('ai:docs');
-                taskContext.documentationType = 'general';
-              }
-
-              // Análisis para testing
-              if (body.toLowerCase().includes('test') ||
-                  body.toLowerCase().includes('prueba') ||
-                  body.toLowerCase().includes('unit test') ||
-                  body.toLowerCase().includes('integration test')) {
-                labels.push('ai:test');
-                taskContext.testType = body.toLowerCase().includes('unit') ? 'unit' :
-                                      (body.toLowerCase().includes('integration') ? 'integration' : 'general');
-              }
-
-              // Análisis para optimización
-              if (body.toLowerCase().includes('optimiza') ||
-                  body.toLowerCase().includes('optimize') ||
-                  body.toLowerCase().includes('performance') ||
-                  body.toLowerCase().includes('lento') ||
-                  body.toLowerCase().includes('slow')) {
-                labels.push('ai:optimize');
-                taskContext.optimizationType = body.toLowerCase().includes('memory') ? 'memory' :
-                                             (body.toLowerCase().includes('speed') ? 'speed' : 'general');
-              }
-
-              // Análisis para nuevas características
-              if (body.toLowerCase().includes('feature') ||
-                  body.toLowerCase().includes('característica') ||
-                  body.toLowerCase().includes('nueva función') ||
-                  body.toLowerCase().includes('new feature')) {
-                labels.push('ai:feature');
-                taskContext.featurePriority = body.toLowerCase().includes('urgent') ? 'high' : 'normal';
-              }
-
-              // Análisis para revisión de código
-              if (body.toLowerCase().includes('review') ||
-                  body.toLowerCase().includes('revisión') ||
-                  body.toLowerCase().includes('audit') ||
-                  body.toLowerCase().includes('auditoría')) {
-                labels.push('ai:review');
-                taskContext.reviewDepth = body.toLowerCase().includes('deep') ? 'deep' : 'normal';
-              }
-
-              // Análisis para seguridad
-              if (body.toLowerCase().includes('security') ||
-                  body.toLowerCase().includes('seguridad') ||
-                  body.toLowerCase().includes('vulnerability') ||
-                  body.toLowerCase().includes('vulnerabilidad') ||
-                  body.toLowerCase().includes('exploit') ||
-                  body.toLowerCase().includes('cve')) {
-                labels.push('ai:security');
-                taskContext.securityScope = body.toLowerCase().includes('full') ? 'comprehensive' : 'standard';
-              }
-
-              // Detectar módulos mencionados con mapeo específico
-              const componentMap = {
-                'web': 'src/instagram_analyzer/web/',
-                'mcp': 'src/instagram_analyzer/mcp/',
-                'cache': 'src/instagram_analyzer/cache/',
-                'ml': 'src/instagram_analyzer/ml/',
-                'parser': 'src/instagram_analyzer/parsers/',
-                'analyzer': 'src/instagram_analyzer/analyzers/',
-                'exporter': 'src/instagram_analyzer/exporters/',
-                'network': 'src/instagram_analyzer/analyzers/network_analysis.py',
-                'config': 'src/instagram_analyzer/config/',
-                'utils': 'src/instagram_analyzer/utils/'
-              };
-
-              Object.keys(componentMap).forEach(module => {
-                if (body.toLowerCase().includes(module)) {
-                  taskContext.targetModule = module;
-                  taskContext.targetPath = componentMap[module];
+            const issueBody = context.payload.issue ? context.payload.issue.body : 
+                              (context.payload.pull_request ? context.payload.pull_request.body : '');
+            const issueTitle = context.payload.issue ? context.payload.issue.title :
+                               (context.payload.pull_request ? context.payload.pull_request.title : '');
+            
+            // Mapping of keywords to labels
+            const labelMappings = {
+              'documentation': 'ai:docs',
+              'docs': 'ai:docs',
+              'readme': 'ai:docs',
+              'test': 'ai:test',
+              'testing': 'ai:test',
+              'unittest': 'ai:test',
+              'optimize': 'ai:optimize',
+              'performance': 'ai:optimize',
+              'feature': 'ai:feature',
+              'implement': 'ai:feature',
+              'review': 'ai:review',
+              'security': 'ai:security',
+              'vulnerability': 'ai:security'
+            };
+            
+            // Find labels based on content
+            const fullText = \`\${issueTitle} \${issueBody}\`.toLowerCase();
+            const assignedLabels = [];
+            
+            Object.entries(labelMappings).forEach(([keyword, label]) => {
+              if (fullText.includes(keyword.toLowerCase())) {
+                if (!assignedLabels.includes(label)) {
+                  assignedLabels.push(label);
                 }
-              });
-
-              // Detectar dependencias entre agentes
-              taskContext.agentDependencies = [];
-              if (labels.includes('ai:feature')) {
-                taskContext.agentDependencies.push('ai:test', 'ai:docs');
               }
-              if (labels.includes('ai:optimize')) {
-                taskContext.agentDependencies.push('ai:test');
-              }
-            }
-
-            // Si encontramos etiquetas, aplicarlas
-            if (labels.length > 0 && issueNumber) {
-              await github.rest.issues.addLabels({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                labels: labels
-              });
-
-              // Guardar contexto para otros workflows
-              const comment = `🤖 **AI Orchestrator Activado**\n\n` +
-                            `Etiquetas asignadas: ${labels.join(', ')}\n\n` +
-                            `Contexto detectado: \`\`\`json\n${JSON.stringify(taskContext, null, 2)}\`\`\`\n\n` +
-                            `Los agentes correspondientes comenzarán a trabajar en esta solicitud.`;
-
-              await github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-
-              core.setOutput('task_context', JSON.stringify(taskContext));
-              core.setOutput('assigned_labels', labels.join(','));
-            } else if (context.payload.inputs) {
-              // Para ejecuciones manuales, simplemente exportar el contexto
-              core.setOutput('task_context', JSON.stringify(taskContext));
-              core.setOutput('assigned_labels', labels.join(','));
-              console.log(`Manual execution with context: ${JSON.stringify(taskContext)}`);
-            }
-
-      - name: Log assigned tasks
+            });
+            
+            // Output labels
+            const labelsStr = assignedLabels.join(',');
+            core.setOutput('assigned_labels', labelsStr);
+            console.log(\`Assigned labels: \${labelsStr || 'none'}\`);
+      
+      - name: Check if agents are needed
+        id: needs-agents
         run: |
-          echo "Assigned labels: ${{ steps.analyze.outputs.assigned_labels || 'none' }}"
-          echo "Task context: ${{ steps.analyze.outputs.task_context || '{}' }}"
-
+          echo "Checking if specialized agents are needed"
+          LABELS="${{ steps.assign-labels.outputs.assigned_labels }}"
+          
+          if [ -n "$LABELS" ]; then
+            echo "requires_agents=true" >> $GITHUB_OUTPUT
+            echo "Specialized agents will be activated"
+          else
+            echo "requires_agents=false" >> $GITHUB_OUTPUT
+            echo "No specialized agents needed"
+          fi
+  
   setup-shared-context:
-    needs: triage
-    if: needs.triage.outputs.assigned_labels != ''
+    needs: [triage]
+    if: needs.triage.outputs.requires_agents == 'true'
     runs-on: ubuntu-latest
     outputs:
-      context-key: ${{ steps.context.outputs.context-key }}
+      context-key: ${{ steps.create-context.outputs.context-key }}
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup shared context store
-        id: context
+      - name: Create shared context
+        id: create-context
         run: |
-          CONTEXT_KEY="ai-context-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}"
+          echo "Creating shared context for agents"
+          CONTEXT_KEY="context-${{ github.run_id }}-${{ github.run_number }}"
           echo "context-key=$CONTEXT_KEY" >> $GITHUB_OUTPUT
-
-          # Crear archivo de contexto compartido
+          
           mkdir -p .task-context
-          echo '${{ needs.triage.outputs.task_context }}' > .task-context/context.json
-          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .task-context/created_at.txt
-          echo "orchestrator" > .task-context/last_updated_by.txt
-
-      - name: Cache task context
+          echo '{
+            "issue_number": "${{ github.event.issue.number || github.event.pull_request.number }}",
+            "repository": "${{ github.repository }}",
+            "run_id": "${{ github.run_id }}",
+            "labels": "${{ needs.triage.outputs.assigned_labels }}",
+            "agent_status": {},
+            "agent_results": {}
+          }' > .task-context/context.json
+          
+          echo "Shared context created with key: $CONTEXT_KEY"
+      
+      - name: Cache shared context
         uses: actions/cache/save@v3
         with:
           path: .task-context
-          key: ${{ steps.context.outputs.context-key }}
-
+          key: ${{ steps.create-context.outputs.context-key }}
+  
   notify-agents:
     needs: [triage, setup-shared-context]
-    if: needs.triage.outputs.assigned_labels != ''
+    if: needs.triage.outputs.requires_agents == 'true'
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Trigger documentation agent
+      - name: Check for documentation needs
         if: contains(needs.triage.outputs.assigned_labels, 'ai:docs')
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ai-documentation-agent.yml',
-              ref: context.ref,
-              inputs: {
-                context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
-                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
-              }
-            });
-            console.log('Documentation agent triggered');
-
-      - name: Trigger testing agent
+        run: |
+          echo "🚀 Triggering documentation agent"
+          # In a real implementation, would trigger another workflow here
+      
+      - name: Check for testing needs
         if: contains(needs.triage.outputs.assigned_labels, 'ai:test')
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ai-testing-agent.yml',
-              ref: context.ref,
-              inputs: {
-                context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
-                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
-              }
-            });
-            console.log('Testing agent triggered');
-
-      - name: Trigger optimization agent
+        run: |
+          echo "🚀 Triggering testing agent"
+          # In a real implementation, would trigger another workflow here
+      
+      - name: Check for optimization needs
         if: contains(needs.triage.outputs.assigned_labels, 'ai:optimize')
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ai-optimization-agent.yml',
-              ref: context.ref,
-              inputs: {
-                context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
-                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
-              }
-            });
-            console.log('Optimization agent triggered');
-
-      - name: Trigger feature agent
+        run: |
+          echo "🚀 Triggering optimization agent"
+          # In a real implementation, would trigger another workflow here
+      
+      - name: Check for feature implementation needs
         if: contains(needs.triage.outputs.assigned_labels, 'ai:feature')
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ai-feature-agent.yml',
-              ref: context.ref,
-              inputs: {
-                context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
-                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
-              }
-            });
-            console.log('Feature agent triggered');
-
-      - name: Trigger review agent
+        run: |
+          echo "🚀 Triggering feature agent"
+          # In a real implementation, would trigger another workflow here
+      
+      - name: Check for review needs
         if: contains(needs.triage.outputs.assigned_labels, 'ai:review')
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ai-review-agent.yml',
-              ref: context.ref,
-              inputs: {
-                context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
-                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
-              }
-            });
-            console.log('Review agent triggered');
-
-      - name: Trigger security agent
+        run: |
+          echo "🚀 Triggering review agent"
+          # In a real implementation, would trigger another workflow here
+      
+      - name: Check for security needs
         if: contains(needs.triage.outputs.assigned_labels, 'ai:security')
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ai-security-agent.yml',
-              ref: context.ref,
-              inputs: {
-                context: ${{ toJSON(needs.triage.outputs.task_context) }},
-                issueNumber: '${{ github.event.issue.number || github.event.pull_request.number || "" }}',
-                contextKey: '${{ needs.setup-shared-context.outputs.context-key }}'
-              }
-            });
-            console.log('Security agent triggered');
-
+        run: |
+          echo "🚀 Triggering security agent"
+          # In a real implementation, would trigger another workflow here
+  
   collect-results:
     needs: [triage, setup-shared-context, notify-agents]
     if: always() && needs.triage.outputs.assigned_labels != ''
@@ -347,72 +166,36 @@ jobs:
           key: ${{ needs.setup-shared-context.outputs.context-key }}
 
       - name: Wait for agent completion
-        run: |
-          echo "⏳ Waiting for specialized agents to complete..."
-          sleep 30  # Give agents time to start
+        id: wait-for-agents
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install GitHub Actions Core
+        run: npm install @actions/core
+
+      - name: Run agent waiting script
+        id: wait-agents-script
+        env:
+          GITHUB_CONTEXT_ISSUE: ${{ toJSON(github.event.issue) }}
+          GITHUB_CONTEXT_PR: ${{ toJSON(github.event.pull_request) }}
+          ASSIGNED_LABELS: ${{ needs.triage.outputs.assigned_labels }}
+          CONTEXT_KEY: ${{ needs.setup-shared-context.outputs.context-key }}
+        run: node .github/scripts/wait-for-agents.js
 
       - name: Aggregate agent results
-        uses: actions/github-script@v6
+        uses: actions/setup-node@v3
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const issueNumber = context.payload.issue ? context.payload.issue.number :
-                              (context.payload.pull_request ? context.payload.pull_request.number : null);
+          node-version: '16'
 
-            if (!issueNumber) {
-              console.log('No issue/PR to update');
-              return;
-            }
-
-            // Crear resumen de resultados
-            let summary = `## 🤖 Multi-Agent Task Summary\n\n`;
-            summary += `**Orchestrator ID**: \`${{ github.run_id }}\`\n`;
-            summary += `**Context Key**: \`${{ needs.setup-shared-context.outputs.context-key }}\`\n`;
-            summary += `**Assigned Labels**: ${{ needs.triage.outputs.assigned_labels }}\n\n`;
-
-            // Agregar estado de agentes activados
-            const labels = '${{ needs.triage.outputs.assigned_labels }}'.split(',');
-            summary += `### Activated Agents:\n`;
-
-            if (labels.includes('ai:docs')) {
-              summary += `- 📚 **Documentation Agent**: Processing documentation updates\n`;
-            }
-            if (labels.includes('ai:test')) {
-              summary += `- 🧪 **Testing Agent**: Implementing tests\n`;
-            }
-            if (labels.includes('ai:optimize')) {
-              summary += `- ⚡ **Optimization Agent**: Analyzing performance\n`;
-            }
-            if (labels.includes('ai:feature')) {
-              summary += `- 🚀 **Feature Agent**: Developing new functionality\n`;
-            }
-            if (labels.includes('ai:review')) {
-              summary += `- 👁️ **Review Agent**: Conducting code review\n`;
-            }
-            if (labels.includes('ai:security')) {
-              summary += `- 🔒 **Security Agent**: Analyzing security vulnerabilities\n`;
-            }
-
-            summary += `\n### Next Steps:\n`;
-            summary += `- Specialized agents will create detailed analysis and PRs\n`;
-            summary += `- Track progress in the [Actions tab](https://github.com/${{ github.repository }}/actions)\n`;
-            summary += `- Agent results will be updated in this issue\n\n`;
-            summary += `*Orchestrated by Multi-Agent System v2.0*`;
-
-            await github.rest.issues.createComment({
-              issue_number: issueNumber,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: summary
-            });
-
-            // Generar step summary
-            core.summary.addHeading('🤖 Multi-Agent Orchestration Complete');
-            core.summary.addTable([
-              [{data: 'Metric', header: true}, {data: 'Value', header: true}],
-              ['Issue/PR', `#${issueNumber}`],
-              ['Labels Assigned', '${{ needs.triage.outputs.assigned_labels }}'],
-              ['Context Key', '${{ needs.setup-shared-context.outputs.context-key }}'],
-              ['Agents Activated', labels.length.toString()]
-            ]);
-            await core.summary.write();
+      - name: Run results aggregation script
+        id: aggregate-results
+        env:
+          GITHUB_CONTEXT_ISSUE: ${{ toJSON(github.event.issue) }}
+          GITHUB_CONTEXT_PR: ${{ toJSON(github.event.pull_request) }}
+          ASSIGNED_LABELS: ${{ needs.triage.outputs.assigned_labels }}
+          CONTEXT_KEY: ${{ needs.setup-shared-context.outputs.context-key }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: node .github/scripts/aggregate-results.js

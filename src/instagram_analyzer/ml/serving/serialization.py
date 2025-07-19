@@ -53,11 +53,18 @@ def save_pipeline(pipeline: Any, path: str, use_mlflow: bool = False) -> None:
 
                 # Save model
                 mlflow.sklearn.log_model(pipeline, path)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error("Error saving pipeline with MLflow: %s", e)
-            # Fall back to joblib/pickle
             logger.info("Falling back to joblib/pickle")
             _save_with_joblib_or_pickle(pipeline, path)
+        except Exception as e:
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            logger.error("Unexpected error saving pipeline with MLflow: %s", e)
+            raise InstagramAnalyzerError(
+                f"Unexpected error saving pipeline with MLflow: {e}",
+                context={"path": path},
+            ) from e
     else:
         # Save with joblib or pickle
         _save_with_joblib_or_pickle(pipeline, path)
@@ -81,9 +88,16 @@ def _save_with_joblib_or_pickle(obj: Any, path: str) -> None:
             logger.info("Saving object with pickle to %s", path)
             with open(path, "wb") as f:
                 pickle.dump(obj, f)
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.error("Error saving object: %s", e)
         raise
+    except Exception as e:
+        from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+        logger.error("Unexpected error saving object: %s", e)
+        raise InstagramAnalyzerError(
+            f"Unexpected error saving object: {e}", context={"path": path}
+        ) from e
 
 
 def load_pipeline(path: str, use_mlflow: bool = False) -> Any:
@@ -104,11 +118,18 @@ def load_pipeline(path: str, use_mlflow: bool = False) -> Any:
         logger.info(f"Loading pipeline from MLflow at {path}")
         try:
             return mlflow.sklearn.load_model(path)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error("Error loading pipeline with MLflow: %s", e)
-            # Fall back to joblib/pickle
             logger.info("Falling back to joblib/pickle")
             return _load_with_joblib_or_pickle(path)
+        except Exception as e:
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            logger.error("Unexpected error loading pipeline with MLflow: %s", e)
+            raise InstagramAnalyzerError(
+                f"Unexpected error loading pipeline with MLflow: {e}",
+                context={"path": path},
+            ) from e
     else:
         # Load with joblib or pickle
         return _load_with_joblib_or_pickle(path)
@@ -143,9 +164,16 @@ def _load_with_joblib_or_pickle(path: str) -> Any:
                         "Security check: Only loading models from trusted locations"
                     )
                 return pickle.load(f)
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.error("Error loading object: %s", e)
         raise
+    except Exception as e:
+        from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+        logger.error("Unexpected error loading object: %s", e)
+        raise InstagramAnalyzerError(
+            f"Unexpected error loading object: {e}", context={"path": path}
+        ) from e
 
 
 def save_model_metadata(metadata: dict[str, Any], path: str) -> None:
@@ -169,9 +197,16 @@ def save_model_metadata(metadata: dict[str, Any], path: str) -> None:
             logger.info("Saving model metadata with pickle to %s", path)
             with open(path, "wb") as f:
                 pickle.dump(metadata, f)
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.error("Error saving model metadata: %s", e)
         raise
+    except Exception as e:
+        from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+        logger.error("Unexpected error saving model metadata: %s", e)
+        raise InstagramAnalyzerError(
+            f"Unexpected error saving model metadata: {e}", context={"path": path}
+        ) from e
 
 
 def load_model_metadata(path: str) -> dict[str, Any]:
@@ -203,6 +238,13 @@ def load_model_metadata(path: str) -> dict[str, Any]:
                         "Security check: Only loading models from trusted locations"
                     )
                 return pickle.load(f)
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.error("Error loading model metadata: %s", e)
         raise
+    except Exception as e:
+        from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+        logger.error("Unexpected error loading model metadata: %s", e)
+        raise InstagramAnalyzerError(
+            f"Unexpected error loading model metadata: {e}", context={"path": path}
+        ) from e

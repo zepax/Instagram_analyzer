@@ -129,8 +129,12 @@ class JSONParser:
             except Exception as e:
                 import logging
 
-                logging.warning(f"Error parsing post: {e}")
-                continue
+                from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                logging.warning("Error parsing post: %s", e)
+                raise InstagramAnalyzerError(
+                    f"Error parsing post: {e}", context={"post_data": post_data}
+                ) from e
 
         return posts
 

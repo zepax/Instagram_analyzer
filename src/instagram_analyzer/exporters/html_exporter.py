@@ -812,68 +812,14 @@ class HTMLExporter:
             "media": [],
         }
 
-        # Add media info (limit to first 3 items for compact mode, 5 for normal)
         media_limit = (
             3 if hasattr(analyzer, "_compact_mode") and analyzer._compact_mode else 5
         )
-        media_list = []
-        for media in post.media[:media_limit]:
-            media_info = {
-                "uri": media.uri,
-                "type": media.media_type.value,
-                "title": media.title or "",
-            }
+        data["media"] = [
+            self._format_media_for_report(media, analyzer)
+            for media in post.media[:media_limit]
+        ]
 
-            # Generar ruta relativa real desde el HTML generado hasta la imagen
-            if media_info["uri"]:
-                if str(media_info["uri"]).startswith("data:image/"):
-                    pass
-                else:
-                    try:
-                        # Determinar la ubicación del HTML generado
-                        # El output_path se pasa al export, lo usamos aquí
-                        html_dir = (
-                            analyzer.output_path
-                            if hasattr(analyzer, "output_path")
-                            else Path(".")
-                        )
-                        # Si analyzer no tiene output_path, intentar deducirlo
-                        if not hasattr(analyzer, "output_path") and hasattr(
-                            analyzer, "report_file"
-                        ):
-                            html_dir = Path(analyzer.report_file).parent
-                        img_path = Path(media_info["uri"])
-                        # Si la ruta no es absoluta, hazla absoluta respecto al data_path
-                        if not img_path.is_absolute():
-                            img_path = (analyzer.data_path / img_path).resolve()
-                        rel_path = os.path.relpath(str(img_path), str(html_dir))
-                        media_info["uri"] = rel_path
-                    except (OSError, ValueError, TypeError) as e:
-                        logging.debug(f"Could not resolve media path: {e}")
-                        pass
-
-            # Try to generate thumbnail for images
-            if media.media_type.value == "image":
-                media_path = resolve_media_path(media.uri, analyzer.data_path)
-                if media_path:
-                    thumbnail = get_image_thumbnail(media_path)
-                    # Make thumbnail with "../" prefix
-                    if thumbnail and not str(thumbnail).startswith("data:image/"):
-                        try:
-                            thumb_path = Path(thumbnail)
-                            if not str(thumb_path).startswith("../"):
-                                media_info["thumbnail"] = "../" + str(thumb_path)
-                            else:
-                                media_info["thumbnail"] = str(thumb_path)
-                        except (OSError, ValueError) as e:
-                            logging.debug(f"Could not create thumbnail: {e}")
-                            pass  # No ponemos una imagen de marcador de posición
-
-            media_list.append(media_info)
-
-        data["media"] = media_list
-
-        # Anonymize user data if required
         if anonymize:
             data["username"] = "anonymous"
             data["profile_picture"] = None
@@ -884,21 +830,16 @@ class HTMLExporter:
 
         return data
 
-    def _format_story_for_report(
-        self, story: Story, analyzer: Any, anonymize: bool
-    ) -> dict[str, Any]:
-        """Format a single story for the report."""
-        data = {
-            "taken_at": (
-                story.taken_at.strftime("%Y-%m-%d %H:%M:%S") if story.taken_at else "N/A"
-            ),
-            "caption": clean_instagram_text(story.caption) if story.caption else "",
-            "media_uri": story.media.uri if story.media else "",
-            "media_type": story.media.media_type.value if story.media else "unknown",
+    def _format_media_for_report(self, media: Any, analyzer: Any) -> dict[str, Any]:
+        """Format media info for a post, with relative paths and thumbnail."""
+        media_info = {
+            "uri": media.uri,
+            "type": media.media_type.value,
+            "title": media.title or "",
         }
-
-        # Generar ruta relativa real desde el HTML generado hasta la imagen de la historia
-        if data["media_uri"]:
+        # Relative path logic
+        if media_info["uri"] and not str(media_info["uri"]).startswith("data:image/"):
+            logger = logging.getLogger(__name__)
             try:
                 html_dir = (
                     analyzer.output_path
@@ -909,33 +850,53 @@ class HTMLExporter:
                     analyzer, "report_file"
                 ):
                     html_dir = Path(analyzer.report_file).parent
-                img_path = Path(data["media_uri"])
+                img_path = Path(media_info["uri"])
                 if not img_path.is_absolute():
                     img_path = (analyzer.data_path / img_path).resolve()
                 rel_path = os.path.relpath(str(img_path), str(html_dir))
-                data["media_uri"] = rel_path
-            except Exception as e:
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Error resolving media path for story: {e}")
+                media_info["uri"] = rel_path
+            except (OSError, ValueError, TypeError) as e:
+                logger.debug("Could not resolve media path: %s", e)
 
-        # Add thumbnail for images
-        if story.media and story.media.media_type.value == "IMAGE":
-            thumbnail_path = resolve_media_path(story.media.uri, analyzer.data_path)
-            if thumbnail_path:
-                thumbnail = get_image_thumbnail(thumbnail_path, (150, 150))
-                # Make thumbnail with "../" prefix
+        # Thumbnail logic
+        if media.media_type.value == "image":
+            logger = logging.getLogger(__name__)
+            media_path = resolve_media_path(media.uri, analyzer.data_path)
+            if media_path:
+                thumbnail = get_image_thumbnail(media_path)
                 if thumbnail and not str(thumbnail).startswith("data:image/"):
                     try:
                         thumb_path = Path(thumbnail)
                         if not str(thumb_path).startswith("../"):
-                            data["thumbnail"] = "../" + str(thumb_path)
+                            media_info["thumbnail"] = "../" + str(thumb_path)
                         else:
-                            data["thumbnail"] = str(thumb_path)
-                    except Exception as e:
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Error generating thumbnail for story: {e}")
-                        pass  # No ponemos una imagen de marcador de posición
+                            media_info["thumbnail"] = str(thumb_path)
+                    except (OSError, ValueError) as e:
+                        logger.debug("Could not create thumbnail: %s", e)
+        return media_info
 
+    def _format_story_for_report(
+        self, story: Story, analyzer: Any, anonymize: bool
+    ) -> dict[str, Any]:
+        """Format a single story for the report."""
+        data = {
+            "taken_at": (
+                story.taken_at.strftime("%Y-%m-%d %H:%M:%S") if story.taken_at else "N/A"
+            ),
+            "caption": clean_instagram_text(story.caption) if story.caption else "",
+            "media_uri": (
+                self._get_relative_media_path(story.media.uri, analyzer)
+                if story.media
+                else ""
+            ),
+            "media_type": story.media.media_type.value if story.media else "unknown",
+        }
+        if story.media and story.media.media_type.value == "IMAGE":
+            thumb = self._get_thumbnail_for_media(
+                story.media.uri, analyzer, size=(150, 150)
+            )
+            if thumb is not None:
+                data["thumbnail"] = thumb
         return data
 
     def _format_reel_for_report(
@@ -948,52 +909,59 @@ class HTMLExporter:
         data = {
             "taken_at": (taken_at.strftime("%Y-%m-%d %H:%M:%S") if taken_at else "N/A"),
             "caption": clean_instagram_text(reel.caption) if reel.caption else "",
-            "media_uri": reel_media.uri if reel_media else "",
+            "media_uri": (
+                self._get_relative_media_path(reel_media.uri, analyzer)
+                if reel_media
+                else ""
+            ),
             "media_type": (reel_media.media_type.value if reel_media else "unknown"),
             "likes_count": getattr(reel, "likes_count", 0),
             "comments_count": getattr(reel, "comments_count", 0),
         }
-
-        # Generar ruta relativa real desde el HTML generado hasta la imagen del reel
-        if data["media_uri"]:
-            try:
-                html_dir = (
-                    analyzer.output_path
-                    if hasattr(analyzer, "output_path")
-                    else Path(".")
-                )
-                if not hasattr(analyzer, "output_path") and hasattr(
-                    analyzer, "report_file"
-                ):
-                    html_dir = Path(analyzer.report_file).parent
-                img_path = Path(data["media_uri"])
-                if not img_path.is_absolute():
-                    img_path = (analyzer.data_path / img_path).resolve()
-                rel_path = os.path.relpath(str(img_path), str(html_dir))
-                data["media_uri"] = rel_path
-            except Exception as e:
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Error resolving media path for reel: {e}")
-
-        # Add thumbnail for videos (first frame) or images
         if reel_media:
-            thumbnail_path = resolve_media_path(reel_media.uri, analyzer.data_path)
-            if thumbnail_path:
-                thumbnail = get_image_thumbnail(thumbnail_path, (150, 150))
-                # Make thumbnail with "../" prefix
-                if thumbnail and not str(thumbnail).startswith("data:image/"):
-                    try:
-                        thumb_path = Path(thumbnail)
-                        if not str(thumb_path).startswith("../"):
-                            data["thumbnail"] = "../" + str(thumb_path)
-                        else:
-                            data["thumbnail"] = str(thumb_path)
-                    except Exception as e:
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Error generating thumbnail for reel: {e}")
-                        pass  # No ponemos una imagen de marcador de posición
-
+            thumb = self._get_thumbnail_for_media(
+                reel_media.uri, analyzer, size=(150, 150)
+            )
+            if thumb is not None:
+                data["thumbnail"] = thumb
         return data
+
+    def _get_relative_media_path(self, uri: str, analyzer: Any) -> str:
+        """Return the relative path for a media URI, or the original if error."""
+        if not uri or str(uri).startswith("data:image/"):
+            return uri or ""
+        try:
+            html_dir = (
+                analyzer.output_path if hasattr(analyzer, "output_path") else Path(".")
+            )
+            if not hasattr(analyzer, "output_path") and hasattr(analyzer, "report_file"):
+                html_dir = Path(analyzer.report_file).parent
+            img_path = Path(uri)
+            if not img_path.is_absolute():
+                img_path = (analyzer.data_path / img_path).resolve()
+            rel_path = os.path.relpath(str(img_path), str(html_dir))
+            return rel_path
+        except (OSError, ValueError, TypeError) as e:
+            logging.debug("Could not resolve media path: %s", e)
+            return uri
+
+    def _get_thumbnail_for_media(
+        self, uri: str, analyzer: Any, size=(150, 150)
+    ) -> Optional[str]:
+        """Return the relative path for a thumbnail, or None if not available."""
+        media_path = resolve_media_path(uri, analyzer.data_path)
+        if not media_path:
+            return None
+        thumbnail = get_image_thumbnail(media_path, size)
+        if thumbnail and not str(thumbnail).startswith("data:image/"):
+            try:
+                thumb_path = Path(thumbnail)
+                if not str(thumb_path).startswith("../"):
+                    return "../" + str(thumb_path)
+                return str(thumb_path)
+            except (OSError, ValueError) as e:
+                logging.debug("Could not create thumbnail: %s", e)
+        return thumbnail
 
     def _format_interaction_for_report(
         self, interaction: StoryInteraction, anonymize: bool

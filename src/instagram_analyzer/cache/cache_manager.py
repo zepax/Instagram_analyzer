@@ -55,9 +55,18 @@ class CacheManager:
             try:
                 self.disk_cache = DiskCache(self.config)
                 logger.info("Disk cache initialized")
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.error(f"Failed to initialize disk cache: {e}")
                 self.config.disk_cache_enabled = False
+            except Exception as e:
+                from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                logger.error(f"Unexpected error initializing disk cache: {e}")
+                self.config.disk_cache_enabled = False
+                raise InstagramAnalyzerError(
+                    f"Unexpected error initializing disk cache: {e}",
+                    context={"config": self.config},
+                ) from e
 
         # Cache warming queue
         self._warming_queue: list[str] = []
@@ -122,10 +131,19 @@ class CacheManager:
                 self._global_stats["misses"] += 1
                 return default
 
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.error(f"Error getting cached value for key {key}: {e}")
                 self._global_stats["errors"] += 1
                 return default
+            except Exception as e:
+                from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                logger.error(f"Unexpected error getting cached value for key {key}: {e}")
+                self._global_stats["errors"] += 1
+                raise InstagramAnalyzerError(
+                    f"Unexpected error getting cached value for key {key}: {e}",
+                    context={"key": key},
+                ) from e
 
     def set(
         self,
@@ -181,10 +199,19 @@ class CacheManager:
 
                 return success
 
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.error(f"Error setting cached value for key {key}: {e}")
                 self._global_stats["errors"] += 1
                 return False
+            except Exception as e:
+                from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                logger.error(f"Unexpected error setting cached value for key {key}: {e}")
+                self._global_stats["errors"] += 1
+                raise InstagramAnalyzerError(
+                    f"Unexpected error setting cached value for key {key}: {e}",
+                    context={"key": key},
+                ) from e
 
     def delete(self, key: str) -> bool:
         """Delete key from all cache layers.
@@ -213,10 +240,19 @@ class CacheManager:
 
                 return success
 
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.error(f"Error deleting cached key {key}: {e}")
                 self._global_stats["errors"] += 1
                 return False
+            except Exception as e:
+                from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                logger.error(f"Unexpected error deleting cached key {key}: {e}")
+                self._global_stats["errors"] += 1
+                raise InstagramAnalyzerError(
+                    f"Unexpected error deleting cached key {key}: {e}",
+                    context={"key": key},
+                ) from e
 
     def exists(self, key: str) -> bool:
         """Check if key exists in any cache layer.
@@ -240,9 +276,17 @@ class CacheManager:
 
             return False
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(f"Error checking if key {key} exists: {e}")
             return False
+        except Exception as e:
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            logger.error(f"Unexpected error checking if key {key} exists: {e}")
+            raise InstagramAnalyzerError(
+                f"Unexpected error checking if key {key} exists: {e}",
+                context={"key": key},
+            ) from e
 
     def clear(self, memory_only: bool = False, disk_only: bool = False) -> None:
         """Clear cache entries.
@@ -264,8 +308,15 @@ class CacheManager:
                 # Clear warming queue
                 self._warming_queue.clear()
 
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.error(f"Error clearing cache: {e}")
+            except Exception as e:
+                from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                logger.error(f"Unexpected error clearing cache: {e}")
+                raise InstagramAnalyzerError(
+                    f"Unexpected error clearing cache: {e}", context={}
+                ) from e
 
     def keys(self, include_memory: bool = True, include_disk: bool = True) -> Set[str]:
         """Get all cache keys from specified layers.
@@ -286,8 +337,15 @@ class CacheManager:
             if include_disk and self.disk_cache:
                 all_keys.update(self.disk_cache.keys())
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(f"Error getting cache keys: {e}")
+        except Exception as e:
+            from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+            logger.error(f"Unexpected error getting cache keys: {e}")
+            raise InstagramAnalyzerError(
+                f"Unexpected error getting cache keys: {e}", context={}
+            ) from e
 
         return all_keys
 
@@ -426,8 +484,15 @@ class CacheManager:
                                 if value is not None:
                                     self.memory_cache.set(key, value)
 
-                except Exception as e:
+                except (OSError, ValueError) as e:
                     logger.error(f"Error in cache warming thread: {e}")
+                except Exception as e:
+                    from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                    logger.error(f"Unexpected error in cache warming thread: {e}")
+                    raise InstagramAnalyzerError(
+                        f"Unexpected error in cache warming thread: {e}", context={}
+                    ) from e
 
         self._warming_thread = threading.Thread(target=warming_worker, daemon=True)
         self._warming_thread.start()

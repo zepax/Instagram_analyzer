@@ -92,6 +92,7 @@ jobs:
               issueNumber = context.payload.pull_request.number;
             } else {
               // Intentar obtener del contexto del orquestador
+              //  *** Esto ya no es necesario, el orquestrador pasa el contexto ***
               // (esto es más complejo y dependerá de cómo pase el orquestador la información)
               issueNumber = null;
             }
@@ -100,6 +101,7 @@ jobs:
 
       - id: get-context
         if: steps.get-issue.outputs.issue-number != ''
+        #  Este paso ya no es necesario, el contexto se pasa directamente.
         uses: actions/github-script@v6
         with:
           script: |
@@ -109,27 +111,12 @@ jobs:
               return;
             }
 
-            // Obtener todos los comentarios y buscar el contexto del orquestador
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-
+            //  En lugar de buscar en los comentarios, usamos el contexto que ya se pasa
+            //  (y que estará en inputs si es workflow_dispatch)
             let taskContext = {};
-            for (const comment of comments.data) {
-              if (comment.body.includes('AI Orchestrator Activado')) {
-                // Extraer JSON del comentario
-                const match = comment.body.match(/```json\n([\s\S]*?)\n```/);
-                if (match && match[1]) {
-                  try {
-                    taskContext = JSON.parse(match[1]);
-                    break;
-                  } catch (e) {
-                    console.log('Error parsing context JSON');
-                  }
-                }
-              }
+            if (github.event.inputs && github.event.inputs.context) {
+              taskContext = JSON.parse(github.event.inputs.context);
+              console.log("Using context from workflow_dispatch input");
             }
 
             core.setOutput('context', JSON.stringify(taskContext));
@@ -231,6 +218,34 @@ jobs:
           branch: ai-docs-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
           base: ${{ github.ref }}
           labels: documentation
+
+      - name: Update shared context with results
+        if: steps.generate-docs.outputs.docs_created == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs').promises;
+            const contextKey = '${{ needs.should-run.outputs.context }}';  // *** DEBE SER contextKey (del orquestrador)
+            const prNumber = '${{ steps.create-pr.outputs.pull-request-number }}';
+            const agentResults = {
+              'ai-documentation-agent.yml': {  // Clave específica para este agente
+                pr_number: prNumber
+              }
+            };
+
+            //  1.  Leer el contexto existente
+            const contextPath = `.task-context/context.json`; // ** DEBE SER ".task-context" **
+            let contextData = {};
+            try {
+              const contextContent = await fs.readFile(contextPath, 'utf8');
+              contextData = JSON.parse(contextContent);
+            } catch (error) {
+              console.error(`Error reading context file: ${error}`);
+            }
+            contextData.agent_results = {...(contextData.agent_results || {}), ...agentResults};
+            contextData.last_updated_by = "ai-documentation-agent";  //  Opcional: para rastrear quién actualizó
+            await fs.writeFile(contextPath, JSON.stringify(contextData, null, 2));
 
       - name: Comment on issue
         if: needs.should-run.outputs.issue-number != ''

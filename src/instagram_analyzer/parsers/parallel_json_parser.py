@@ -214,8 +214,13 @@ class ParallelJSONParser(JSONParser):
                     data = safe_json_load(file_path)
                     results[str(file_path)] = data
                 except Exception as e:
-                    self.logger.error(f"Error processing {file_path}: {e}")
-                    results[str(file_path)] = None
+                    from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                    self.logger.error("Error processing %s: %s", file_path, e)
+                    raise InstagramAnalyzerError(
+                        f"Error processing {file_path}: {e}",
+                        context={"file_path": str(file_path)},
+                    ) from e
             return results
 
         # Parallel processing
@@ -229,8 +234,13 @@ class ParallelJSONParser(JSONParser):
                 data = safe_json_load(file_path)
                 return (str(file_path), data)
             except Exception as e:
-                self.logger.error(f"Error processing {file_path}: {e}")
-                return (str(file_path), None)
+                from instagram_analyzer.exceptions import InstagramAnalyzerError
+
+                self.logger.error("Error processing %s: %s", file_path, e)
+                raise InstagramAnalyzerError(
+                    f"Error processing {file_path}: {e}",
+                    context={"file_path": str(file_path)},
+                ) from e
 
         results_list = self.parallel_processor.process_files_parallel(
             file_paths,
