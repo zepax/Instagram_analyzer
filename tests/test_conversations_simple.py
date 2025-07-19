@@ -20,7 +20,7 @@ def test_conversation_parser_only():
         print("✅ Imports exitosos")
     except ImportError as e:
         print(f"❌ Error de import: {e}")
-        return False
+        assert False, f"Error de import: {e}"
 
     # Configurar rutas
     data_root = Path("examples/instagram-florenescobar-2025-07-13-pcFuHXmB")
@@ -30,7 +30,7 @@ def test_conversation_parser_only():
 
     if not inbox_dir.exists():
         print(f"❌ Directorio no encontrado: {inbox_dir}")
-        return False
+        assert False, f"Directorio no encontrado: {inbox_dir}"
 
     # Buscar archivos de conversación
     conversation_files = []
@@ -43,7 +43,7 @@ def test_conversation_parser_only():
 
     if not conversation_files:
         print("❌ No se encontraron archivos de conversación")
-        return False
+        assert False, "No se encontraron archivos de conversación"
 
     # Inicializar parser
     parser = ConversationParser(data_root)
@@ -89,17 +89,17 @@ def test_conversation_parser_only():
                     total_media = sum(metrics.media_counts.values())
                     print(f"   • Medios compartidos: {total_media}")
 
-            return True
+            # Test pasa si llega aquí
         else:
             print("❌ Error en parsing - conversation es None")
-            return False
+            assert False, "Error en parsing - conversation es None"
 
     except Exception as e:
         print(f"❌ Error durante parsing: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False, f"Error durante parsing: {e}"
 
 
 def test_multiple_conversations():
@@ -114,7 +114,7 @@ def test_multiple_conversations():
         from instagram_analyzer.parsers.conversation_parser import ConversationParser
     except ImportError as e:
         print(f"❌ Error de import: {e}")
-        return False
+        assert False, f"Error de import: {e}"
 
     data_root = Path("examples/instagram-florenescobar-2025-07-13-pcFuHXmB")
     inbox_dir = data_root / "your_instagram_activity" / "messages" / "inbox"
@@ -129,7 +129,7 @@ def test_multiple_conversations():
 
         if not conversations:
             print("❌ No se cargaron conversaciones")
-            return False
+            assert False, "No se cargaron conversaciones"
 
         # Estadísticas básicas
         total_messages = sum(len(conv.messages) for conv in conversations)
@@ -166,14 +166,14 @@ def test_multiple_conversations():
 
         print(f"\n👥 Contactos únicos: {len(all_participants)}")
 
-        return True
+        # Test pasa si llega aquí
 
     except Exception as e:
         print(f"❌ Error durante carga múltiple: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False, f"Error durante carga múltiple: {e}"
 
 
 def test_analysis_generation():
@@ -187,7 +187,7 @@ def test_analysis_generation():
         from instagram_analyzer.parsers.conversation_parser import ConversationParser
     except ImportError as e:
         print(f"❌ Error de import: {e}")
-        return False
+        assert False, f"Error de import: {e}"
 
     data_root = Path("examples/instagram-florenescobar-2025-07-13-pcFuHXmB")
     inbox_dir = data_root / "your_instagram_activity" / "messages" / "inbox"
@@ -247,14 +247,14 @@ def test_analysis_generation():
 
         print(f"\n💾 Análisis exportado: {analysis_file}")
 
-        return True
+        # Test pasa si llega aquí
 
     except Exception as e:
         print(f"❌ Error durante análisis: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False, f"Error durante análisis: {e}"
 
 
 def main():
@@ -277,12 +277,9 @@ def main():
         print("-" * 40)
 
         try:
-            success = test_func()
-            results[test_name] = success
-            if success:
-                print(f"✅ {test_name} - EXITOSO")
-            else:
-                print(f"❌ {test_name} - FALLÓ")
+            test_func()
+            results[test_name] = True
+            print(f"✅ {test_name} - EXITOSO")
         except Exception as e:
             print(f"💥 {test_name} - ERROR: {e}")
             results[test_name] = False
@@ -310,9 +307,8 @@ def main():
     else:
         print("⚠️ Algunas pruebas fallaron. Revisar errores arriba.")
 
-    return successful == total
+    # No return, para pytest
 
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    main()

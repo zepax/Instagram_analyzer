@@ -468,7 +468,11 @@ class TestInstagramAnalyzerBasicInfo:
         """Test getting basic info without profile."""
         analyzer = InstagramAnalyzer(mock_instagram_data)
 
-        analyzer.posts = [MagicMock()]
+        # Create a real Post object instead of MagicMock to avoid datetime/MagicMock TypeError
+        test_time = datetime.now(timezone.utc)
+        media = create_test_media(uri="test.jpg", timestamp=test_time)
+        post = create_test_post(media=[media], timestamp=test_time, caption="Test post")
+        analyzer.posts = [post]
 
         info = analyzer.get_basic_info()
 

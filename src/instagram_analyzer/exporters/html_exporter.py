@@ -235,6 +235,11 @@ class HTMLExporter:
             )
             overview["story_interaction_types"] = interaction_types.most_common()
 
+        # Engagement totals
+        total_likes = sum(post.likes_count for post in analyzer.posts)
+        total_comments = sum(post.comments_count for post in analyzer.posts)
+        overview["engagement_totals"] = {"likes": total_likes, "comments": total_comments}
+
         return overview
 
     def _get_temporal_analysis(self, analyzer: Any) -> dict[str, Any]:
@@ -308,9 +313,24 @@ class HTMLExporter:
         top_liked = posts_by_likes[:5]
         top_commented = posts_by_comments[:5]
 
-        # Engagement distribution
-        likes_counts = [p.likes_count for p in posts]
-        comments_counts = [p.comments_count for p in posts]
+        # Engagement distribution - ensure numeric values
+        likes_counts = [
+            (
+                int(p.likes_count)
+                if isinstance(p.likes_count, (int, str)) and str(p.likes_count).isdigit()
+                else 0
+            )
+            for p in posts
+        ]
+        comments_counts = [
+            (
+                int(p.comments_count)
+                if isinstance(p.comments_count, (int, str))
+                and str(p.comments_count).isdigit()
+                else 0
+            )
+            for p in posts
+        ]
 
         return {
             "has_data": True,
@@ -393,7 +413,7 @@ class HTMLExporter:
         # Caption analysis
         captions = [p.caption for p in analyzer.posts if p.caption]
         avg_caption_length = (
-            sum(len(c) for c in captions) / len(captions) if captions else 0
+            sum(len(str(c)) for c in captions) / len(captions) if captions else 0
         )
 
         # Media type analysis
@@ -434,7 +454,7 @@ class HTMLExporter:
                 "total_usage": len(all_hashtags),
                 "posts_with_hashtags": posts_with_hashtags,
                 "usage_rate": (
-                    round(posts_with_hashtags / len(analyzer.posts) * 100, 1)
+                    round(int(posts_with_hashtags) / len(analyzer.posts) * 100, 1)
                     if analyzer.posts
                     else 0
                 ),
