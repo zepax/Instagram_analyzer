@@ -61,7 +61,7 @@ httpx = "^0.24.0"
 h11 = "^0.14.0"
 
 # ML model management
-mlflow = "^2.7.0"
+mlflow = "^3.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
