@@ -2,8 +2,13 @@
 # This file is maintained for backward compatibility
 # See docs/CONSOLIDATED_WORKFLOW.md for more information
 
+
 on:
   workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
 
 jobs:
   redirect:
