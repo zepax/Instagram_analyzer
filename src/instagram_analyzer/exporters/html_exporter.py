@@ -454,7 +454,13 @@ class HTMLExporter:
                 "total_usage": len(all_hashtags),
                 "posts_with_hashtags": posts_with_hashtags,
                 "usage_rate": (
-                    round(int(posts_with_hashtags) / len(analyzer.posts) * 100, 1)
+                    round(
+                        int(posts_with_hashtags) / len(analyzer.posts) * 100, 1
+                    )
+                    if isinstance(posts_with_hashtags, (int, float)) or (
+                        isinstance(posts_with_hashtags, str) and posts_with_hashtags.isdigit()
+                    )
+                    else 0
                     if analyzer.posts
                     else 0
                 ),
